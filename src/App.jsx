@@ -335,7 +335,7 @@ export default function App(){
         .elitem{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center}.elitem:hover{background:#14141f}.elitem.on{background:#14141f;border-left:3px solid #00BCD4}
         .offer-row{display:flex;gap:20px;background:#0d0d16;border:1px solid #1a1a28;border-radius:12px;padding:20px;margin-bottom:16px;transition:border .2s}
         .offer-row:hover{border-color:#252545}
-        .offer-preview{flex:1;min-width:0}
+        .offer-preview{flex:1;min-width:0;max-width:520px}
         .offer-form{width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
         .offer-form .ofi{margin-bottom:2px}
         .offer-form .ofi label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:1px}
@@ -440,7 +440,7 @@ export default function App(){
           </div>
           {/* CANVAS */}}
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"auto"}}>
-            <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"100%",maxHeight:"calc(100vh - 100px)",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
+            <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"min(100%,calc(100vh - 120px))",maxHeight:"calc(100vh - 120px)",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
           </div>
         </div>
       ) : (
