@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const FONTS=["Montserrat","Oswald","Bebas Neue","Poppins","Raleway","Roboto Condensed","Anton","Barlow Condensed","Teko","Russo One"];
+const DEFAULT_COLOR_PRESETS=[
+  {id:"cyan",label:"Cyan",accentColor:"#00BCD4"},
+  {id:"rosso",label:"Rosso",accentColor:"#FF5252"},
+  {id:"verde",label:"Verde",accentColor:"#4CAF50"},
+  {id:"oro",label:"Oro",accentColor:"#FFC107"},
+  {id:"viola",label:"Viola",accentColor:"#9C27B0"},
+];
 const CW=1000,CH=1000;
 const GL=160,GR=840,GT=25,GB=850; /* guide Left, Right, Top, Bottom */
 let _oid=0,_exId=0;
@@ -55,7 +62,8 @@ function drawGuides(ctx){
   ctx.restore();
 }
 function readFile(file){return new Promise(res=>{const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>res({img,dataUrl:ev.target.result});img.src=ev.target.result;};r.readAsDataURL(file);});}
-async function parseAI(text){
+async function parseAI(text, apiKey){
+  if(!apiKey) throw new Error("Inserisci la tua API key Anthropic nelle impostazioni (Setup)");
   try{
     const prompt = `Sei un assistente per un'azienda di noleggio auto a lungo termine. Dal seguente testo, estrai i dati dell'offerta auto.
 Rispondi SOLO con un oggetto JSON valido, senza markdown, senza backtick, senza altro testo. I campi sono:
@@ -72,14 +80,22 @@ ${text}`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) throw new Error("API " + res.status);
+    if (!res.ok) {
+      const errBody = await res.json().catch(()=>({}));
+      throw new Error(errBody?.error?.message || "API " + res.status);
+    }
     const d = await res.json();
     if (d.error) throw new Error(d.error.message || "API error");
     const raw = (d.content || []).map(c => c.text || "").join("");
@@ -145,6 +161,14 @@ export default function App(){
   const [waParsing,setWaParsing]=useState(false);
   const [waError,setWaError]=useState("");
   const [showGuides,setShowGuides]=useState(true);
+  const [apiKey,setApiKey]=useState(()=>localStorage.getItem("anthropic_api_key")||"");
+  const [colorPresets,setColorPresets]=useState(()=>{try{const s=localStorage.getItem("colorPresets");return s?JSON.parse(s):DEFAULT_COLOR_PRESETS;}catch{return DEFAULT_COLOR_PRESETS;}});
+  const [newPresetColor,setNewPresetColor]=useState("#00BCD4");
+  const [newPresetName,setNewPresetName]=useState("");
+
+  // Persist API key and color presets
+  useEffect(()=>{localStorage.setItem("anthropic_api_key",apiKey);},[apiKey]);
+  useEffect(()=>{localStorage.setItem("colorPresets",JSON.stringify(colorPresets));},[colorPresets]);
 
   // UNDO
   const histRef=useRef([]);const isUndo=useRef(false);
@@ -301,8 +325,11 @@ export default function App(){
 
   const addOffer=(afterId)=>{const o=newOffer();setOffers(p=>{if(!afterId)return[...p,o];const i=p.findIndex(x=>x.id===afterId);const n=[...p];n.splice(i+1,0,o);return n;});setActiveOfferId(o.id);};
   const dupFromCurrent=()=>{const o=newOffer();o.carName=getEl("carName").text;o.highlightWord=getEl("carName").highlightWord||"";o.specs=getEl("specs").text;o.duration=getEl("duration").text;o.deposit=getEl("deposit").text;o.price=getEl("price").text;setOffers(p=>[...p,o]);setActiveOfferId(o.id);};
-  const handleWa=async()=>{if(!waText.trim())return;setWaParsing(true);setWaError("");try{const p=await parseAI(waText);if(p.carName)setEl("carName","text",p.carName);if(p.highlightWord)setEl("carName","highlightWord",p.highlightWord);if(p.specs)setEl("specs","text",p.specs);if(p.duration)setEl("duration","text",p.duration);if(p.deposit)setEl("deposit","text",p.deposit);if(p.price)setEl("price","text",p.price);setWaText("");}catch(err){console.error(err);setWaError("Errore: "+err.message);}setWaParsing(false);};
-  const handleWaOffer=async(id,text)=>{if(!text.trim())return;setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:true,_waError:""}:o));try{const p=await parseAI(text);setOffers(pr=>pr.map(o=>o.id===id?{...o,carName:p.carName||o.carName,highlightWord:p.highlightWord||o.highlightWord,specs:p.specs||o.specs,duration:p.duration||o.duration,deposit:p.deposit||o.deposit,price:p.price||o.price,_parsing:false,_waText:""}:o));}catch(err){console.error(err);setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:false,_waError:"Errore: "+err.message}:o));}};
+  const applyAccentColor=(color)=>{setElements(p=>p.map(e=>{const upd={};if(e.highlightColor!==undefined)upd.highlightColor=color;if(e.id==="price")upd.color=color;return{...e,...upd};}));};
+  const saveColorPreset=()=>{if(!newPresetName.trim())return;const id="p"+Date.now();setColorPresets(p=>[...p,{id,label:newPresetName.trim(),accentColor:newPresetColor}]);setNewPresetName("");};
+  const deleteColorPreset=(id)=>setColorPresets(p=>p.filter(x=>x.id!==id));
+  const handleWa=async()=>{if(!waText.trim())return;setWaParsing(true);setWaError("");try{const p=await parseAI(waText,apiKey);if(p.carName)setEl("carName","text",p.carName);if(p.highlightWord)setEl("carName","highlightWord",p.highlightWord);if(p.specs)setEl("specs","text",p.specs);if(p.duration)setEl("duration","text",p.duration);if(p.deposit)setEl("deposit","text",p.deposit);if(p.price)setEl("price","text",p.price);setWaText("");}catch(err){console.error(err);setWaError("Errore: "+err.message);}setWaParsing(false);};
+  const handleWaOffer=async(id,text)=>{if(!text.trim())return;setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:true,_waError:""}:o));try{const p=await parseAI(text,apiKey);setOffers(pr=>pr.map(o=>o.id===id?{...o,carName:p.carName||o.carName,highlightWord:p.highlightWord||o.highlightWord,specs:p.specs||o.specs,duration:p.duration||o.duration,deposit:p.deposit||o.deposit,price:p.price||o.price,_parsing:false,_waText:""}:o));}catch(err){console.error(err);setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:false,_waError:"Errore: "+err.message}:o));}};
 
   const sel=selectedEl?getEl(selectedEl):null;
   const isBatch=tab==="offerte";
@@ -370,16 +397,38 @@ export default function App(){
           {/* SIDEBAR */}
           <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12}}>
             {tab==="setup"&&(<div>
+              {/* API Key */}
+              <div style={{marginBottom:14,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
+                <div className="lbl" style={{marginBottom:4}}>🔑 Anthropic API Key</div>
+                <input className="inp" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{fontSize:11,fontFamily:"monospace"}}/>
+                <div style={{fontSize:9,color:apiKey?"#4CAF50":"#ef5350",marginTop:4}}>{apiKey?"✅ API key impostata":"⚠️ Necessaria per Compila con AI"}</div>
+              </div>
+
               <div style={{borderTop:"1px solid #1e1e30",paddingTop:12,marginBottom:12}}>
                 <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>⚙ Sfondo</div>
                 <div style={{marginBottom:12}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
                 <div style={{marginBottom:14}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
                 <div style={{marginBottom:12}}><div className="lbl">Immagine sfondo</div><input type="file" accept="image/*" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setBgImage,e)}/>{bgImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
-                <div className="lbl" style={{marginBottom:8}}>Preset colori</div>
-                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{[{bg:"#0d0d1a",a:"#00BCD4",l:"Cyan"},{bg:"#1a0a0a",a:"#FF5252",l:"Rosso"},{bg:"#0a1a0d",a:"#4CAF50",l:"Verde"},{bg:"#1a1505",a:"#FFC107",l:"Oro"},{bg:"#0d0a1a",a:"#9C27B0",l:"Viola"},{bg:"#f0f0f0",a:"#1a1a2e",l:"Chiaro"}].map(pr=>(<button key={pr.l} className="btn bs" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>{setBgColor(pr.bg);setElements(p=>p.map(e=>({...e,...(e.highlightColor!==undefined?{highlightColor:pr.a}:{}),
-                  ...(e.id==="price"?{color:pr.a}:{}),
-                  ...(pr.bg==="#f0f0f0"&&e.color==="#FFFFFF"?{color:"#1a1a2e"}:{}),
-                  ...(pr.bg!=="#f0f0f0"&&e.color==="#1a1a2e"?{color:"#FFFFFF"}:{})})));}}><span style={{display:"inline-block",width:10,height:10,background:pr.bg,border:`2px solid ${pr.a}`,borderRadius:2,marginRight:4,verticalAlign:"middle"}}/>{pr.l}</button>))}</div>
+                <div>
+                  <div className="lbl" style={{marginBottom:6}}>Preset colori accento</div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+                    {colorPresets.map(pr=>(
+                      <div key={pr.id} style={{display:"flex",alignItems:"center",gap:2}}>
+                        <button className="btn bs" style={{fontSize:10,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}} onClick={()=>applyAccentColor(pr.accentColor)}>
+                          <span style={{display:"inline-block",width:10,height:10,background:pr.accentColor,borderRadius:2,flexShrink:0}}/>
+                          {pr.label}
+                        </button>
+                        <button onClick={()=>deleteColorPreset(pr.id)} title="Rimuovi" style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:11,padding:"2px 4px",lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                    <input type="color" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:32,height:28,border:"none",background:"none",cursor:"pointer",padding:0,borderRadius:4}}/>
+                    <input className="inp" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:80,padding:"4px 6px",fontSize:11,fontFamily:"monospace"}} placeholder="#00BCD4"/>
+                    <input className="inp" value={newPresetName} onChange={e=>setNewPresetName(e.target.value)} style={{flex:1,minWidth:60,padding:"4px 6px",fontSize:11}} placeholder="Nome preset"/>
+                    <button className="btn bp" onClick={saveColorPreset} disabled={!newPresetName.trim()} style={{padding:"5px 10px",fontSize:11,opacity:!newPresetName.trim()?0.4:1}}>💾 Salva</button>
+                  </div>
+                </div>
               </div>
 
               <div style={{borderTop:"1px solid #1e1e30",paddingTop:12}}>
