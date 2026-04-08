@@ -400,7 +400,10 @@ export default function App(){
               {/* API Key */}
               <div style={{marginBottom:14,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
                 <div className="lbl" style={{marginBottom:4}}>🔑 Anthropic API Key</div>
-                <input className="inp" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{fontSize:11,fontFamily:"monospace"}}/>
+                <div className="row" style={{gap:6}}>
+                  <input className="inp" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{fontSize:11,fontFamily:"monospace",flex:1}}/>
+                  {apiKey&&<button onClick={()=>{setApiKey("");localStorage.removeItem("anthropic_api_key");}} title="Elimina API key" style={{background:"#1a0a0a",border:"1px solid #3a1a1a",color:"#ef5350",borderRadius:6,cursor:"pointer",padding:"0 10px",fontSize:13,flexShrink:0}}>🗑</button>}
+                </div>
                 <div style={{fontSize:9,color:apiKey?"#4CAF50":"#ef5350",marginTop:4}}>{apiKey?"✅ API key impostata":"⚠️ Necessaria per Compila con AI"}</div>
               </div>
 
