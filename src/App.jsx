@@ -140,6 +140,7 @@ export default function App(){
   const [dragging,setDragging]=useState(null);
   const [dragStart,setDragStart]=useState(null);
   const [offers,setOffers]=useState([]);
+  const [activeOfferId,setActiveOfferId]=useState(null);
   const [waText,setWaText]=useState("");
   const [waParsing,setWaParsing]=useState(false);
   const [waError,setWaError]=useState("");
@@ -298,14 +299,14 @@ export default function App(){
     return bytes;
   };
 
-  const scrollTo=id=>setTimeout(()=>{document.getElementById(`offer-${id}`)?.scrollIntoView({behavior:"smooth",block:"start"});},100);
-  const addOffer=(afterId)=>{const o=newOffer();setOffers(p=>{if(!afterId)return[...p,o];const i=p.findIndex(x=>x.id===afterId);const n=[...p];n.splice(i+1,0,o);return n;});scrollTo(o.id);};
-  const dupFromCurrent=()=>{const o=newOffer();o.carName=getEl("carName").text;o.highlightWord=getEl("carName").highlightWord||"";o.specs=getEl("specs").text;o.duration=getEl("duration").text;o.deposit=getEl("deposit").text;o.price=getEl("price").text;setOffers(p=>[...p,o]);scrollTo(o.id);};
+  const addOffer=(afterId)=>{const o=newOffer();setOffers(p=>{if(!afterId)return[...p,o];const i=p.findIndex(x=>x.id===afterId);const n=[...p];n.splice(i+1,0,o);return n;});setActiveOfferId(o.id);};
+  const dupFromCurrent=()=>{const o=newOffer();o.carName=getEl("carName").text;o.highlightWord=getEl("carName").highlightWord||"";o.specs=getEl("specs").text;o.duration=getEl("duration").text;o.deposit=getEl("deposit").text;o.price=getEl("price").text;setOffers(p=>[...p,o]);setActiveOfferId(o.id);};
   const handleWa=async()=>{if(!waText.trim())return;setWaParsing(true);setWaError("");try{const p=await parseAI(waText);if(p.carName)setEl("carName","text",p.carName);if(p.highlightWord)setEl("carName","highlightWord",p.highlightWord);if(p.specs)setEl("specs","text",p.specs);if(p.duration)setEl("duration","text",p.duration);if(p.deposit)setEl("deposit","text",p.deposit);if(p.price)setEl("price","text",p.price);setWaText("");}catch(err){console.error(err);setWaError("Errore: "+err.message);}setWaParsing(false);};
   const handleWaOffer=async(id,text)=>{if(!text.trim())return;setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:true,_waError:""}:o));try{const p=await parseAI(text);setOffers(pr=>pr.map(o=>o.id===id?{...o,carName:p.carName||o.carName,highlightWord:p.highlightWord||o.highlightWord,specs:p.specs||o.specs,duration:p.duration||o.duration,deposit:p.deposit||o.deposit,price:p.price||o.price,_parsing:false,_waText:""}:o));}catch(err){console.error(err);setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:false,_waError:"Errore: "+err.message}:o));}};
 
   const sel=selectedEl?getEl(selectedEl):null;
   const isBatch=tab==="offerte";
+  const activeOffer=isBatch?(offers.find(o=>o.id===activeOfferId)||offers[0]||null):null;
   const qf=[{id:"carName",label:"🚗 Nome Auto",ph:"es. MERCEDES GLC COUPÉ"},{id:"carName",key:"highlightWord",label:"✨ Evidenziata",ph:"es. GLC COUPÉ"},{id:"specs",label:"⚙️ Caratteristiche",ph:"es. 220D MHEV 4MATIC"},{id:"duration",label:"📅 Durata / KM",ph:"es. 48 MESI – 60.000 KM"},{id:"deposit",label:"💰 Anticipo",ph:"es. ANTICIPO 2.000€ I.E."},{id:"price",label:"🏷️ Canone",ph:"es. 689"},{id:"priceSuffix",label:"Suffisso",ph:"€/MESE"},{id:"priceNote",label:"Nota",ph:"IVA ESCLUSA"},{id:"header",label:"Intestazione",ph:"NOLEGGIO LUNGO TERMINE"}];
 
   return (
@@ -333,10 +334,7 @@ export default function App(){
         .qf input,.qf textarea{background:transparent;border:none;color:#fff;font-size:13px;width:100%;outline:none;font-weight:600}
         .qf input::placeholder,.qf textarea::placeholder{color:#3a3a50;font-weight:400}
         .elitem{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center}.elitem:hover{background:#14141f}.elitem.on{background:#14141f;border-left:3px solid #00BCD4}
-        .offer-row{display:flex;gap:20px;background:#0d0d16;border:1px solid #1a1a28;border-radius:12px;padding:20px;margin-bottom:16px;transition:border .2s}
-        .offer-row:hover{border-color:#252545}
-        .offer-preview{flex:1;min-width:0;max-width:520px}
-        .offer-form{width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
+        .offer-form{display:flex;flex-direction:column;gap:6px}
         .offer-form .ofi{margin-bottom:2px}
         .offer-form .ofi label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:1px}
         .offer-form .ofi input{background:#0a0a14;border:1px solid #1e1e30;color:#ddd;padding:7px 9px;border-radius:6px;font-size:12px;width:100%;outline:none;font-weight:600}.offer-form .ofi input:focus{border-color:#00BCD4}
@@ -444,117 +442,140 @@ export default function App(){
           </div>
         </div>
       ) : (
-        /* ==================== BATCH MODE — FULL SCREEN ==================== */
-        <div style={{flex:1,overflow:"auto",padding:"20px 24px",background:"#08080d"}}>
+        /* ==================== BATCH MODE — SETUP LAYOUT ==================== */
+        <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+          {/* LEFT SIDEBAR */}
+          <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12,display:"flex",flexDirection:"column",gap:10}}>
 
-          {offers.length===0&&(
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"50vh",gap:16}}>
-              <div style={{fontSize:48}}>📦</div>
-              <div style={{fontSize:16,color:"#666",textAlign:"center"}}>Nessuna offerta. Inizia aggiungendone una.</div>
-              <div style={{display:"flex",gap:10}}>
-                <button className="btn bp" style={{padding:"12px 24px",fontSize:14}} onClick={()=>addOffer(null)}>➕ Nuova offerta</button>
-                <button className="btn bs" style={{padding:"12px 24px",fontSize:14}} onClick={dupFromCurrent}>📋 Copia da offerta singola</button>
+            {/* Offer list */}
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#777",textTransform:"uppercase",letterSpacing:".6px"}}>Offerte ({offers.length})</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn bp" style={{padding:"4px 10px",fontSize:11}} onClick={()=>addOffer(null)}>➕ Nuova</button>
+                  <button className="btn bs" style={{padding:"4px 10px",fontSize:11}} onClick={dupFromCurrent}>📋 Copia</button>
+                </div>
               </div>
-            </div>
-          )}
-
-          {offers.map((o,idx)=>(
-            <div key={o.id}>
-              <div id={`offer-${o.id}`} className="offer-row">
-                {/* LEFT: preview */}
-                <div className="offer-preview">
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                    <div className="offer-num">{idx+1}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:16,fontWeight:800,color:o.carName?"#fff":"#555"}}>{o.carName||"Nuova offerta"}</div>
-                      {o.price&&<div style={{fontSize:14,fontWeight:900,color:"#00BCD4"}}>{o.price} €/mese</div>}
-                    </div>
-                    <button className="btn bp" style={{fontSize:11,padding:"6px 16px"}} onClick={()=>setDlModal({type:"offer",offer:o,num:idx+1})}>⬇ Scarica</button>
-                    <button className="btn bd" style={{padding:"6px 10px",fontSize:11}} onClick={()=>removeOffer(o.id)}>🗑</button>
+              {offers.length===0&&(
+                <div style={{textAlign:"center",padding:"20px 0",color:"#555",fontSize:12}}>Nessuna offerta ancora.</div>
+              )}
+              {offers.map((o,idx)=>(
+                <div key={o.id} onClick={()=>setActiveOfferId(o.id)}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,marginBottom:4,cursor:"pointer",
+                    background:activeOffer&&activeOffer.id===o.id?"#1a1a2e":"#0a0a14",
+                    border:`1px solid ${activeOffer&&activeOffer.id===o.id?"#00BCD4":"#1e1e30"}`}}>
+                  <div className="offer-num" style={{width:28,height:28,fontSize:12,flexShrink:0}}>{idx+1}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:o.carName?"#fff":"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.carName||"Nuova offerta"}</div>
+                    {o.price&&<div style={{fontSize:10,color:"#00BCD4",fontWeight:700}}>{o.price} €/mese</div>}
                   </div>
-                  <LiveCanvas offer={o} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
-                    onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,carX:x,carY:y}:oo))}
-                    onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
+                  <button className="btn bd" style={{padding:"3px 7px",fontSize:10,flexShrink:0}} onClick={e=>{e.stopPropagation();removeOffer(o.id);}}>🗑</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Controls for active offer */}
+            {activeOffer&&(
+              <div style={{borderTop:"1px solid #1a1a28",paddingTop:10}}>
+                {/* AI */}
+                <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:8,padding:10,marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#25D366",marginBottom:6}}>💬 Inserisci istruzioni</div>
+                  <textarea value={activeOffer._waText||""} onChange={e=>setOffers(p=>p.map(x=>x.id===activeOffer.id?{...x,_waText:e.target.value}:x))} placeholder="Scrivi qui le indicazioni per la nuova offerta" rows={2} style={{width:"100%",background:"#0d1f16",border:"1px solid #1b3a28",color:"#ddd",padding:"6px 8px",borderRadius:6,fontSize:11,outline:"none",resize:"vertical"}}/>
+                  <div className="row" style={{marginTop:6}}>
+                    <button className="btn bg" disabled={activeOffer._parsing||!(activeOffer._waText||"").trim()} onClick={()=>handleWaOffer(activeOffer.id,activeOffer._waText||"")} style={{padding:"6px 14px",fontSize:11,opacity:!(activeOffer._waText||"").trim()?0.4:1}}>{activeOffer._parsing?"⏳":"🤖 Compila con AI"}</button>
+                    {activeOffer._waError&&<span style={{fontSize:10,color:"#ef5350"}}>{activeOffer._waError}</span>}
+                  </div>
                 </div>
 
-                {/* RIGHT: form */}
-                <div className="offer-form">
-                  {/* WA paste */}
-                  <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:8,padding:10,marginBottom:8}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#25D366",marginBottom:6}}>💬 Inserisci istruzioni</div>
-                    <textarea value={o._waText||""} onChange={e=>setOffers(p=>p.map(x=>x.id===o.id?{...x,_waText:e.target.value}:x))} placeholder="Scrivi qui le indicazioni per la nuova offerta" rows={2} style={{width:"100%",background:"#0d1f16",border:"1px solid #1b3a28",color:"#ddd",padding:"6px 8px",borderRadius:6,fontSize:11,outline:"none",resize:"vertical"}}/>
-                    <div className="row" style={{marginTop:6}}>
-                      <button className="btn bg" disabled={o._parsing||!(o._waText||"").trim()} onClick={()=>handleWaOffer(o.id,o._waText||"")} style={{padding:"6px 14px",fontSize:11,opacity:!(o._waText||"").trim()?.4:1}}>{o._parsing?"⏳":"🤖 Compila con AI"}</button>
-                      {o._waError&&<span style={{fontSize:10,color:"#ef5350"}}>{o._waError}</span>}
-                    </div>
-                  </div>
+                {/* Fields */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+                  {[{k:"carName",l:"Nome Auto",ph:"MERCEDES GLC COUPÉ"},{k:"highlightWord",l:"Evidenziata",ph:"GLC COUPÉ"},{k:"specs",l:"Caratteristiche",ph:"220D MHEV..."},{k:"duration",l:"Durata / KM",ph:"48 MESI – 60.000 KM"},{k:"deposit",l:"Anticipo",ph:"ANTICIPO 2.000€"},{k:"price",l:"Canone €",ph:"689"}].map(f=>(
+                    <div className="ofi" key={f.k+f.l}><label>{f.l}</label><input value={activeOffer[f.k]} placeholder={f.ph} onChange={e=>updOffer(activeOffer.id,f.k,e.target.value)}/></div>
+                  ))}
+                </div>
 
-                  {/* Fields */}
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    {[{k:"carName",l:"Nome Auto",ph:"MERCEDES GLC COUPÉ"},{k:"highlightWord",l:"Evidenziata",ph:"GLC COUPÉ"},{k:"specs",l:"Caratteristiche",ph:"220D MHEV..."},{k:"duration",l:"Durata / KM",ph:"48 MESI – 60.000 KM"},{k:"deposit",l:"Anticipo",ph:"ANTICIPO 2.000€"},{k:"price",l:"Canone €",ph:"689"}].map(f=>(
-                      <div className="ofi" key={f.k}><label>{f.l}</label><input value={o[f.k]} placeholder={f.ph} onChange={e=>updOffer(o.id,f.k,e.target.value)}/></div>
-                    ))}
-                  </div>
+                {/* Car upload */}
+                <div style={{marginBottom:10}}>
+                  <div className="lbl">Auto PNG</div>
+                  <input type="file" accept="image/png" className="fi" style={{padding:6,fontSize:11}} onChange={e=>handleOfferCar(activeOffer.id,e)}/>
+                  {activeOffer.carThumb&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅ Caricata</div>}
+                </div>
 
-                  {/* Car upload */}
-                  <div style={{marginTop:8}}>
-                    <div className="lbl">Auto PNG</div>
-                    <input type="file" accept="image/png" className="fi" style={{padding:6,fontSize:11}} onChange={e=>handleOfferCar(o.id,e)}/>
-                    {o.carThumb&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅ Caricata</div>}
+                {/* Position */}
+                <div style={{marginBottom:6}}>
+                  <div className="lbl">Posizione & scala auto</div>
+                  <div className="row" style={{marginBottom:4}}>
+                    <span style={{fontSize:9,width:12}}>X</span><input className="inp" type="number" value={activeOffer.carX} onChange={e=>updOffer(activeOffer.id,"carX",+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/>
+                    <span style={{fontSize:9,width:12}}>Y</span><input className="inp" type="number" value={activeOffer.carY} onChange={e=>updOffer(activeOffer.id,"carY",+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/>
                   </div>
+                  <div className="row"><span style={{fontSize:9,width:28}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={activeOffer.carScale} onChange={e=>updOffer(activeOffer.id,"carScale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:10,width:30,textAlign:"right"}}>{Math.round(activeOffer.carScale*100)}%</span></div>
+                  <div style={{fontSize:10,color:"#555",marginTop:4,textAlign:"center"}}>Trascina l'auto sull'anteprima</div>
+                </div>
 
-                  {/* Position */}
-                  <div style={{marginTop:8}}>
-                    <div className="lbl">Posizione & scala auto</div>
-                    <div className="row" style={{marginBottom:4}}>
-                      <span style={{fontSize:9,width:12}}>X</span><input className="inp" type="number" value={o.carX} onChange={e=>updOffer(o.id,"carX",+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/>
-                      <span style={{fontSize:9,width:12}}>Y</span><input className="inp" type="number" value={o.carY} onChange={e=>updOffer(o.id,"carY",+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/>
-                    </div>
-                    <div className="row"><span style={{fontSize:9,width:28}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={o.carScale} onChange={e=>updOffer(o.id,"carScale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:10,width:30,textAlign:"right"}}>{Math.round(o.carScale*100)}%</span></div>
-                  </div>
-                  <div style={{fontSize:10,color:"#555",marginTop:6,textAlign:"center"}}>Trascina l'auto sull'anteprima</div>
-
-                  {/* EXTRAS */}
-                  <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1e30"}}>
-                    <div className="row" style={{marginBottom:6}}><span className="lbl" style={{flex:1,marginBottom:0}}>Elementi extra</span><span style={{fontSize:10,color:"#555"}}>{(o.extras||[]).length} inseriti</span></div>
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:5,fontSize:10,marginBottom:6}} onChange={e=>addExtra(o.id,e)}/>
-                    {(o.extras||[]).map((ex,ei)=>(
-                      <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
-                        <div className="row" style={{marginBottom:4}}>
-                          {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
-                          <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
-                          <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>removeExtra(o.id,ei)}>✕</button>
-                        </div>
-                        <div className="row" style={{marginBottom:3}}>
-                          <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>updExtra(o.id,ei,"x",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
-                          <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>updExtra(o.id,ei,"y",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
-                        </div>
-                        <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="2" step="0.02" value={ex.scale} onChange={e=>updExtra(o.id,ei,"scale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
+                {/* EXTRAS */}
+                <div style={{borderTop:"1px solid #1e1e30",paddingTop:10}}>
+                  <div className="row" style={{marginBottom:6}}><span className="lbl" style={{flex:1,marginBottom:0}}>Elementi extra</span><span style={{fontSize:10,color:"#555"}}>{(activeOffer.extras||[]).length} inseriti</span></div>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:5,fontSize:10,marginBottom:6}} onChange={e=>addExtra(activeOffer.id,e)}/>
+                  {(activeOffer.extras||[]).map((ex,ei)=>(
+                    <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
+                      <div className="row" style={{marginBottom:4}}>
+                        {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
+                        <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
+                        <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>removeExtra(activeOffer.id,ei)}>✕</button>
                       </div>
-                    ))}
-                    {(o.extras||[]).length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina gli extra sull'anteprima</div>}
-                  </div>
+                      <div className="row" style={{marginBottom:3}}>
+                        <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>updExtra(activeOffer.id,ei,"x",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
+                        <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>updExtra(activeOffer.id,ei,"y",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
+                      </div>
+                      <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="2" step="0.02" value={ex.scale} onChange={e=>updExtra(activeOffer.id,ei,"scale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
+                    </div>
+                  ))}
+                  {(activeOffer.extras||[]).length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina gli extra sull'anteprima</div>}
+                </div>
+
+                {/* Download current offer */}
+                <div style={{marginTop:12,display:"flex",gap:6}}>
+                  <button className="btn bp" style={{flex:1,padding:"8px 0",fontSize:12}} onClick={()=>setDlModal({type:"offer",offer:activeOffer,num:offers.findIndex(o=>o.id===activeOffer.id)+1})}>⬇ Scarica questa offerta</button>
+                </div>
+                <div style={{marginTop:6}}>
+                  <button className="btn bs" style={{width:"100%",padding:"6px 0",fontSize:11}} onClick={()=>addOffer(activeOffer.id)}>➕ Aggiungi offerta dopo</button>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* ADD after this offer */}
-              <div className="add-btn" onClick={()=>addOffer(o.id)}>➕ Aggiungi offerta qui</div>
-            </div>
-          ))}
-
-          {offers.length>0&&(
-            <div style={{textAlign:"center",padding:"20px 0"}}>
-              {!dlProgress?
-                <button className="btn bp" style={{padding:"14px 30px",fontSize:14}} onClick={()=>setDlModal({type:"all"})}>🚀 Scarica tutte in ZIP ({offers.length} offerte)</button>
-                :<div style={{fontSize:14,color:"#00BCD4",fontWeight:700}}>
-                  <div style={{marginBottom:8}}>⏳ {dlProgress.zipping?"Creando ZIP...": `Generando ${dlProgress.c}/${dlProgress.t}...`}</div>
-                  <div style={{width:300,height:6,background:"#14141f",borderRadius:3,margin:"0 auto",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${(dlProgress.c/dlProgress.t)*100}%`,background:"linear-gradient(90deg,#00BCD4,#0097A7)",borderRadius:3,transition:"width .3s"}}/>
-                  </div>
+          {/* RIGHT: CANVAS */}
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"auto",gap:16}}>
+            {activeOffer?(
+              <div style={{maxWidth:"min(100%,calc(100vh - 120px))",width:"100%"}}>
+                <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
+                  onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,carX:x,carY:y}:oo))}
+                  onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+                <div style={{fontSize:48}}>📦</div>
+                <div style={{fontSize:16,color:"#666",textAlign:"center"}}>Nessuna offerta. Inizia aggiungendone una.</div>
+                <div style={{display:"flex",gap:10}}>
+                  <button className="btn bp" style={{padding:"12px 24px",fontSize:14}} onClick={()=>addOffer(null)}>➕ Nuova offerta</button>
+                  <button className="btn bs" style={{padding:"12px 24px",fontSize:14}} onClick={dupFromCurrent}>📋 Copia da offerta singola</button>
                 </div>
-              }
-            </div>
-          )}
+              </div>
+            )}
+            {offers.length>0&&(
+              <div>
+                {!dlProgress?
+                  <button className="btn bp" style={{padding:"10px 24px",fontSize:13}} onClick={()=>setDlModal({type:"all"})}>🚀 Scarica tutte in ZIP ({offers.length})</button>
+                  :<div style={{fontSize:14,color:"#00BCD4",fontWeight:700,textAlign:"center"}}>
+                    <div style={{marginBottom:8}}>⏳ {dlProgress.zipping?"Creando ZIP...":`Generando ${dlProgress.c}/${dlProgress.t}...`}</div>
+                    <div style={{width:300,height:6,background:"#14141f",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${(dlProgress.c/dlProgress.t)*100}%`,background:"linear-gradient(90deg,#00BCD4,#0097A7)",borderRadius:3,transition:"width .3s"}}/>
+                    </div>
+                  </div>
+                }
+              </div>
+            )}
+          </div>
         </div>
       )}
 
