@@ -2,28 +2,31 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 const FONTS=["Montserrat","Oswald","Bebas Neue","Poppins","Raleway","Roboto Condensed","Anton","Barlow Condensed","Teko","Russo One"];
 const CW=1000,CH=1000;
-let _oid=0;
-const newOffer=()=>({id:++_oid,carName:"",highlightWord:"",specs:"",duration:"",deposit:"",price:"",carImg:null,carThumb:null,carX:500,carY:620,carScale:0.85,_waText:"",_parsing:false,_waError:""});
+const GL=160,GR=840,GT=25,GB=850; /* guide Left, Right, Top, Bottom */
+let _oid=0,_exId=0;
+const newOffer=()=>({id:++_oid,carName:"",highlightWord:"",specs:"",duration:"",deposit:"",price:"",carImg:null,carThumb:null,carX:500,carY:620,carScale:0.85,extras:[],_waText:"",_parsing:false,_waError:""});
 
+const mkShadow=()=>({shadowEnabled:false,shadowColor:"#000000",shadowBlur:0,shadowOffsetX:0,shadowOffsetY:0});
 const makeEls=()=>[
-  {id:"header",text:"NOLEGGIO LUNGO TERMINE",x:500,y:120,fontSize:28,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",textAlign:"center",visible:true},
-  {id:"carName",text:"MERCEDES GLC COUPÉ",x:500,y:178,fontSize:52,fontFamily:"Montserrat",fontWeight:"900",color:"#FFFFFF",highlightWord:"GLC COUPÉ",highlightColor:"#00BCD4",textAlign:"center",visible:true},
-  {id:"specs",text:"220D MHEV 4MATIC ADVANCED PLUS",x:500,y:228,fontSize:22,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",textAlign:"center",visible:true},
-  {id:"duration",text:"48 MESI – 60.000 KM",x:500,y:292,fontSize:24,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",bgColor:"#1a1a2e",pillStyle:true,highlightWord:"60.000 KM",highlightColor:"#00BCD4",textAlign:"center",visible:true},
-  {id:"deposit",text:"ANTICIPO 2.000€ I.E.",x:500,y:336,fontSize:22,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",textAlign:"center",visible:true},
-  {id:"price",text:"689",x:420,y:420,fontSize:110,fontFamily:"Montserrat",fontWeight:"900",color:"#00BCD4",textAlign:"center",visible:true},
-  {id:"priceSuffix",text:"€/MESE",x:540,y:400,fontSize:30,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",highlightWord:"€",highlightColor:"#00BCD4",textAlign:"left",visible:true},
-  {id:"priceNote",text:"IVA ESCLUSA",x:540,y:438,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",textAlign:"left",visible:true},
-  {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true},
+  {id:"header",text:"NOLEGGIO LUNGO TERMINE",x:500,y:120,fontSize:28,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",textAlign:"center",visible:true,...mkShadow()},
+  {id:"carName",text:"MERCEDES GLC COUPÉ",x:500,y:178,fontSize:52,fontFamily:"Montserrat",fontWeight:"900",color:"#FFFFFF",highlightWord:"GLC COUPÉ",highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
+  {id:"specs",text:"220D MHEV 4MATIC ADVANCED PLUS",x:500,y:228,fontSize:22,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",textAlign:"center",visible:true,...mkShadow()},
+  {id:"duration",text:"48 MESI – 60.000 KM",x:500,y:292,fontSize:24,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",bgColor:"#1a1a2e",pillStyle:true,highlightWord:"60.000 KM",highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
+  {id:"deposit",text:"ANTICIPO 2.000€ I.E.",x:500,y:336,fontSize:22,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",textAlign:"center",visible:true,...mkShadow()},
+  {id:"price",text:"689",x:420,y:420,fontSize:110,fontFamily:"Montserrat",fontWeight:"900",color:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
+  {id:"priceSuffix",text:"€/MESE",x:540,y:400,fontSize:30,fontFamily:"Montserrat",fontWeight:"700",color:"#FFFFFF",highlightWord:"€",highlightColor:"#00BCD4",textAlign:"left",visible:true,...mkShadow()},
+  {id:"priceNote",text:"IVA ESCLUSA",x:540,y:438,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",textAlign:"left",visible:true,...mkShadow()},
+  {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
-function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP){
+function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras){
   ctx.clearRect(0,0,CW,CH);ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);
   if(bg){const s=Math.max(CW/bg.width,CH/bg.height);ctx.drawImage(bg,(CW-bg.width*s)/2,(CH-bg.height*s)/2,bg.width*s,bg.height*s);ctx.globalAlpha=ov;ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);ctx.globalAlpha=1;}
   if(logo){const w=logo.width*lP.scale,h=logo.height*lP.scale;ctx.drawImage(logo,lP.x-w/2,lP.y-h/2,w,h);}
   els.forEach(el=>{
     if(!el.visible)return;ctx.save();
     ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.textAlign=el.textAlign||"center";ctx.textBaseline="middle";
+    if(el.shadowEnabled){ctx.shadowColor=el.shadowColor||"rgba(0,0,0,0.8)";ctx.shadowBlur=el.shadowBlur||0;ctx.shadowOffsetX=el.shadowOffsetX||0;ctx.shadowOffsetY=el.shadowOffsetY||0;}else{ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;}
     if(el.id==="services"){el.text.split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${h?"700":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.fillStyle=h?(el.highlightColor||"#00BCD4"):el.color;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));});ctx.restore();return;}
     if(el.pillStyle){const tw=ctx.measureText(el.text).width,ph=el.fontSize+16,pw=tw+40,rx=el.textAlign==="center"?el.x-pw/2:el.x;ctx.fillStyle=el.bgColor||"#1a1a2e";ctx.beginPath();const r=6;ctx.moveTo(rx+r,el.y-ph/2);ctx.lineTo(rx+pw-r,el.y-ph/2);ctx.quadraticCurveTo(rx+pw,el.y-ph/2,rx+pw,el.y-ph/2+r);ctx.lineTo(rx+pw,el.y+ph/2-r);ctx.quadraticCurveTo(rx+pw,el.y+ph/2,rx+pw-r,el.y+ph/2);ctx.lineTo(rx+r,el.y+ph/2);ctx.quadraticCurveTo(rx,el.y+ph/2,rx,el.y+ph/2-r);ctx.lineTo(rx,el.y-ph/2+r);ctx.quadraticCurveTo(rx,el.y-ph/2,rx+r,el.y-ph/2);ctx.closePath();ctx.fill();
       if(el.highlightWord){const parts=el.text.split("–").map(s=>s.trim());if(parts.length===2){const p1=parts[0]+" – ",sx=el.textAlign==="center"?el.x-tw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;ctx.fillText(p1,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(parts[1],sx+ctx.measureText(p1).width,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}ctx.restore();return;}
@@ -31,8 +34,26 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP){
     ctx.restore();
   });
   if(car){const w=car.width*cP.scale,h=car.height*cP.scale;ctx.drawImage(car,cP.x-w/2,cP.y-h/2,w,h);}
+  if(extras&&extras.length){extras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
 }
-function drawGuides(ctx){ctx.save();ctx.setLineDash([6,4]);ctx.lineWidth=1;ctx.strokeStyle="rgba(0,188,212,0.45)";ctx.beginPath();ctx.moveTo(160,0);ctx.lineTo(160,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(CW-160,0);ctx.lineTo(CW-160,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,25);ctx.lineTo(CW,25);ctx.stroke();ctx.beginPath();ctx.moveTo(0,CH-150);ctx.lineTo(CW,CH-150);ctx.stroke();ctx.restore();}
+function drawGuides(ctx){
+  ctx.save();
+  /* Solid bright lines */
+  ctx.setLineDash([10,5]);ctx.lineWidth=2;ctx.strokeStyle="rgba(0,188,212,0.7)";
+  /* Left */
+  ctx.beginPath();ctx.moveTo(GL,0);ctx.lineTo(GL,CH);ctx.stroke();
+  /* Right */
+  ctx.beginPath();ctx.moveTo(GR,0);ctx.lineTo(GR,CH);ctx.stroke();
+  /* Top */
+  ctx.beginPath();ctx.moveTo(0,GT);ctx.lineTo(CW,GT);ctx.stroke();
+  /* Bottom */
+  ctx.beginPath();ctx.moveTo(0,GB);ctx.lineTo(CW,GB);ctx.stroke();
+  /* Small labels */
+  ctx.setLineDash([]);ctx.font='bold 11px sans-serif';ctx.fillStyle="rgba(0,188,212,0.55)";ctx.textAlign="left";ctx.textBaseline="top";
+  ctx.fillText("L",GL+4,GT+4);ctx.textAlign="right";ctx.fillText("R",GR-4,GT+4);
+  ctx.textAlign="left";ctx.fillText("T",GL+4,GT+4);ctx.fillText("B",GL+4,GB-16);
+  ctx.restore();
+}
 function readFile(file){return new Promise(res=>{const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>res({img,dataUrl:ev.target.result});img.src=ev.target.result;};r.readAsDataURL(file);});}
 async function parseAI(text){
   try{
@@ -73,7 +94,7 @@ ${text}`;
 const makeFilename=(name,price,num)=>{const n=new Date(),dd=String(n.getDate()).padStart(2,"0"),mm=String(n.getMonth()+1).padStart(2,"0"),yy=n.getFullYear(),hh=String(n.getHours()).padStart(2,"0"),mi=String(n.getMinutes()).padStart(2,"0");const prefix=num!=null?`${num}.`:"";return`${prefix}${(name||"auto").replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ]/g,"_").replace(/_+/g,"_")}_${(price||"0").replace(/[^0-9]/g,"")}_${dd}-${mm}-${yy}_${hh}-${mi}.png`;};
 
 /* ===== LIVE PREVIEW CANVAS (per-offer) ===== */
-function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar}){
+function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra}){
   const ref=useRef(null);
   const [drag,setDrag]=useState(null);
   const [ds,setDs]=useState(null);
@@ -87,12 +108,15 @@ function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOp
   }),[offer,elements]);
   useEffect(()=>{
     const c=ref.current;if(!c)return;const ctx=c.getContext("2d");
-    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos);
+    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras);
     if(showGuides)drawGuides(ctx);
   },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides]);
   const coords=e=>{const c=ref.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
-  const onDown=e=>{const p=coords(e);const car=offer.carImg||carImage;if(car){const w=car.width*offer.carScale,h=car.height*offer.carScale;if(p.x>offer.carX-w/2&&p.x<offer.carX+w/2&&p.y>offer.carY-h/2&&p.y<offer.carY+h/2){setDrag(true);setDs({x:p.x-offer.carX,y:p.y-offer.carY});}}};
-  const onMove=e=>{if(!drag)return;const p=coords(e);onDragCar(Math.round(p.x-ds.x),Math.round(p.y-ds.y));};
+  const onDown=e=>{const p=coords(e);
+    /* extras: check top-to-bottom (last = top) */
+    if(offer.extras&&offer.extras.length){for(let i=offer.extras.length-1;i>=0;i--){const ex=offer.extras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDrag({type:"extra",idx:i});setDs({x:p.x-ex.x,y:p.y-ex.y});return;}}}
+    const car=offer.carImg||carImage;if(car){const w=car.width*offer.carScale,h=car.height*offer.carScale;if(p.x>offer.carX-w/2&&p.x<offer.carX+w/2&&p.y>offer.carY-h/2&&p.y<offer.carY+h/2){setDrag({type:"car"});setDs({x:p.x-offer.carX,y:p.y-offer.carY});}}};
+  const onMove=e=>{if(!drag)return;const p=coords(e);if(drag.type==="extra"&&onDragExtra){onDragExtra(drag.idx,Math.round(p.x-ds.x),Math.round(p.y-ds.y));}else if(drag.type==="car"){onDragCar(Math.round(p.x-ds.x),Math.round(p.y-ds.y));}};
   const onUp=()=>{setDrag(null);setDs(null);};
   return <canvas ref={ref} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{width:"100%",borderRadius:8,cursor:drag?"grabbing":"default",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}/>;
 }
@@ -109,7 +133,9 @@ export default function App(){
   const [bgColor,setBgColor]=useState("#0d0d1a");
   const [overlayOpacity,setOverlayOpacity]=useState(0.55);
   const [selectedEl,setSelectedEl]=useState(null);
-  const [tab,setTab]=useState("offerta");
+  const [tab,setTab]=useState("setup");
+  const [accCampi,setAccCampi]=useState(true);
+  const [accElementi,setAccElementi]=useState(false);
   const [fontsLoaded,setFontsLoaded]=useState(false);
   const [dragging,setDragging]=useState(null);
   const [dragStart,setDragStart]=useState(null);
@@ -133,9 +159,11 @@ export default function App(){
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
 
   // Single canvas
-  useEffect(()=>{if(tab==="batch")return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab]);
+  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
+  const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
+  const autoFitCar=(img)=>{const s=(GR-GL)/img.width;const cy=GB-(img.height*s)/2;setCarPos({x:(GL+GR)/2,y:cy,scale:s});};
   const buildEls=(o)=>elements.map(el=>{if(el.id==="carName")return{...el,text:o.carName||el.text,highlightWord:o.highlightWord||el.highlightWord};if(el.id==="specs")return{...el,text:o.specs||el.text};if(el.id==="duration")return{...el,text:o.duration||el.text};if(el.id==="deposit")return{...el,text:o.deposit||el.text};if(el.id==="price")return{...el,text:o.price||el.text};return el;});
 
 
@@ -147,8 +175,11 @@ export default function App(){
 
   // BATCH
   const updOffer=(id,k,v)=>setOffers(p=>p.map(o=>o.id===id?{...o,[k]:v}:o));
-  const handleOfferCar=async(id,e)=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);setOffers(p=>p.map(o=>o.id===id?{...o,carImg:img,carThumb:dataUrl}:o));};
+  const handleOfferCar=async(id,e)=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);const s=(GR-GL)/img.width;const cy=GB-(img.height*s)/2;setOffers(p=>p.map(o=>o.id===id?{...o,carImg:img,carThumb:dataUrl,carX:(GL+GR)/2,carY:cy,carScale:s}:o));};
   const removeOffer=id=>setOffers(p=>p.filter(o=>o.id!==id));
+  const addExtra=async(offerId,e)=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);const ex={id:++_exId,img,thumb:dataUrl,x:500,y:500,scale:0.3};setOffers(p=>p.map(o=>o.id===offerId?{...o,extras:[...o.extras,ex]}:o));};
+  const removeExtra=(offerId,exIdx)=>setOffers(p=>p.map(o=>o.id===offerId?{...o,extras:o.extras.filter((_,i)=>i!==exIdx)}:o));
+  const updExtra=(offerId,exIdx,k,v)=>setOffers(p=>p.map(o=>o.id===offerId?{...o,extras:o.extras.map((ex,i)=>i===exIdx?{...ex,[k]:v}:ex)}:o));
   const QUALITY={ultra:{label:"Ultra HD",desc:"1500×1500px — massima qualità",size:1500,icon:"🔷"},hd:{label:"HD",desc:"1000×1000px — qualità standard",size:1000,icon:"🟢"},media:{label:"Media",desc:"700×700px — leggera",size:700,icon:"🟡"}};
   const [dlModal,setDlModal]=useState(null);
   const [dlProgress,setDlProgress]=useState(null);
@@ -156,13 +187,13 @@ export default function App(){
   const renderImg=(o,sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos);
+    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras);
     return oc.toDataURL("image/png");
   };
   const renderSingle=(sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos);
+    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null);
     return oc.toDataURL("image/png");
   };
 
@@ -274,7 +305,7 @@ export default function App(){
   const handleWaOffer=async(id,text)=>{if(!text.trim())return;setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:true,_waError:""}:o));try{const p=await parseAI(text);setOffers(pr=>pr.map(o=>o.id===id?{...o,carName:p.carName||o.carName,highlightWord:p.highlightWord||o.highlightWord,specs:p.specs||o.specs,duration:p.duration||o.duration,deposit:p.deposit||o.deposit,price:p.price||o.price,_parsing:false,_waText:""}:o));}catch(err){console.error(err);setOffers(p=>p.map(o=>o.id===id?{...o,_parsing:false,_waError:"Errore: "+err.message}:o));}};
 
   const sel=selectedEl?getEl(selectedEl):null;
-  const isBatch=tab==="batch";
+  const isBatch=tab==="offerte";
   const qf=[{id:"carName",label:"🚗 Nome Auto",ph:"es. MERCEDES GLC COUPÉ"},{id:"carName",key:"highlightWord",label:"✨ Evidenziata",ph:"es. GLC COUPÉ"},{id:"specs",label:"⚙️ Caratteristiche",ph:"es. 220D MHEV 4MATIC"},{id:"duration",label:"📅 Durata / KM",ph:"es. 48 MESI – 60.000 KM"},{id:"deposit",label:"💰 Anticipo",ph:"es. ANTICIPO 2.000€ I.E."},{id:"price",label:"🏷️ Canone",ph:"es. 689"},{id:"priceSuffix",label:"Suffisso",ph:"€/MESE"},{id:"priceNote",label:"Nota",ph:"IVA ESCLUSA"},{id:"header",label:"Intestazione",ph:"NOLEGGIO LUNGO TERMINE"}];
 
   return (
@@ -330,8 +361,8 @@ export default function App(){
       </div>
 
       {/* TAB BAR */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"1px solid #1a1a28",background:"#0d0d16"}}>
-        {[{k:"offerta",l:"📝 Offerta"},{k:"immagini",l:"🖼 Immagini"},{k:"elemento",l:"🎨 Stile Elementi"},{k:"sfondo",l:"⚙ Sfondo"},{k:"batch",l:`📦 Batch${offers.length?` (${offers.length})`:""}`}].map(t=>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",borderBottom:"1px solid #1a1a28",background:"#0d0d16"}}>
+        {[{k:"setup",l:"⚙ Setup"},{k:"stile",l:"🎨 Stile"},{k:"offerte",l:`📦 Offerte${offers.length?` (${offers.length})`:""}`}].map(t=>
           <button key={t.k} className={`tab ${tab===t.k?"on":""}`} onClick={()=>setTab(t.k)}>{t.l}</button>)}
       </div>
 
@@ -340,43 +371,74 @@ export default function App(){
         <div style={{display:"flex",flex:1,overflow:"hidden"}}>
           {/* SIDEBAR */}
           <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12}}>
-            {tab==="offerta"&&(<div>
-              <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:10,padding:12,marginBottom:14}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><span style={{fontSize:18}}>💬</span><span style={{fontSize:12,fontWeight:700,color:"#25D366"}}>Inserisci istruzioni</span></div>
-                <textarea className="inp" rows={3} value={waText} onChange={e=>setWaText(e.target.value)} placeholder="Scrivi qui le indicazioni per la nuova offerta" style={{background:"#0d1f16",border:"1px solid #1b3a28",fontSize:12,marginBottom:8}}/>
-                <div className="row"><button className="btn bg" disabled={waParsing||!waText.trim()} onClick={handleWa} style={{padding:"8px 18px",fontSize:12,opacity:!waText.trim()?.4:1}}>{waParsing?"⏳ Analizzo...":"🤖 Compila con AI"}</button>{waError&&<span style={{fontSize:11,color:"#ef5350"}}>{waError}</span>}</div>
+            {tab==="setup"&&(<div>
+              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12,marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>⚙ Sfondo</div>
+                <div style={{marginBottom:12}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
+                <div style={{marginBottom:14}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
+                <div style={{marginBottom:12}}><div className="lbl">Immagine sfondo</div><input type="file" accept="image/*" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setBgImage,e)}/>{bgImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
+                <div className="lbl" style={{marginBottom:8}}>Preset colori</div>
+                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{[{bg:"#0d0d1a",a:"#00BCD4",l:"Cyan"},{bg:"#1a0a0a",a:"#FF5252",l:"Rosso"},{bg:"#0a1a0d",a:"#4CAF50",l:"Verde"},{bg:"#1a1505",a:"#FFC107",l:"Oro"},{bg:"#0d0a1a",a:"#9C27B0",l:"Viola"},{bg:"#f0f0f0",a:"#1a1a2e",l:"Chiaro"}].map(pr=>(<button key={pr.l} className="btn bs" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>{setBgColor(pr.bg);setElements(p=>p.map(e=>({...e,...(e.highlightColor!==undefined?{highlightColor:pr.a}:{}),
+                  ...(e.id==="price"?{color:pr.a}:{}),
+                  ...(pr.bg==="#f0f0f0"&&e.color==="#FFFFFF"?{color:"#1a1a2e"}:{}),
+                  ...(pr.bg!=="#f0f0f0"&&e.color==="#1a1a2e"?{color:"#FFFFFF"}:{})})));}}><span style={{display:"inline-block",width:10,height:10,background:pr.bg,border:`2px solid ${pr.a}`,borderRadius:2,marginRight:4,verticalAlign:"middle"}}/>{pr.l}</button>))}</div>
               </div>
-              <div style={{fontSize:13,fontWeight:800,color:"#00BCD4",marginBottom:12}}>Dati Offerta</div>
-              {qf.map((q,i)=>{const el=getEl(q.id),val=q.key?el[q.key]||"":el.text;return(<div className="qf" key={i}><div className="ql">{q.label}</div><input value={val} placeholder={q.ph} onChange={e=>{if(q.key)setEl(q.id,q.key,e.target.value);else setEl(q.id,"text",e.target.value);}}/></div>);})}
-              <div className="qf"><div className="ql">📋 Servizi</div><textarea className="inp" rows={3} value={getEl("services").text} onChange={e=>setEl("services","text",e.target.value)} style={{background:"transparent",border:"none",fontSize:11,padding:0}}/></div>
+
+              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12}}>
+                <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>🏷️ Logo</div>
+                <div style={{marginBottom:12}}><div className="lbl">Immagine logo</div><input type="file" accept="image/png" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setLogoImage,e)}/>{logoImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
+                <div style={{marginBottom:10}}>
+                  <div className="lbl">Posizione Logo</div>
+                  <div className="row" style={{marginBottom:4}}><span style={{fontSize:9,width:12}}>X</span><input className="inp" type="number" value={logoPos.x} onChange={e=>setLogoPos(p=>({...p,x:+e.target.value}))} style={{padding:"3px 5px",fontSize:10}}/><span style={{fontSize:9,width:12}}>Y</span><input className="inp" type="number" value={logoPos.y} onChange={e=>setLogoPos(p=>({...p,y:+e.target.value}))} style={{padding:"3px 5px",fontSize:10}}/></div>
+                  <div className="row"><span style={{fontSize:9,width:24}}>Scala</span><input type="range" min="0.02" max="1" step="0.01" value={logoPos.scale} onChange={e=>setLogoPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(logoPos.scale*100)}%</span></div>
+                </div>
+              </div>
             </div>)}
-            {tab==="immagini"&&(<div>
-              {[{l:"🏞️ Sfondo",s:bgImage,set:setBgImage,a:"image/*"},{l:"🚗 Auto",s:carImage,set:setCarImage,a:"image/png"},{l:"🏷️ Logo",s:logoImage,set:setLogoImage,a:"image/png"}].map(u=>(
-                <div key={u.l} style={{marginBottom:14}}><div className="lbl">{u.l}</div><input type="file" accept={u.a} className="fi" onChange={e=>loadImg(u.set,e)}/>{u.s&&<div style={{fontSize:11,color:"#00BCD4",marginTop:3}}>✅</div>}</div>))}
-              <div className="card"><div className="lbl">Auto</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={carPos.x} onChange={e=>setCarPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={carPos.y} onChange={e=>setCarPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={carPos.scale} onChange={e=>setCarPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(carPos.scale*100)}%</span></div></div>
-              <div className="card"><div className="lbl">Logo</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={logoPos.x} onChange={e=>setLogoPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={logoPos.y} onChange={e=>setLogoPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.02" max="1" step="0.01" value={logoPos.scale} onChange={e=>setLogoPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(logoPos.scale*100)}%</span></div></div>
-            </div>)}
-            {tab==="elemento"&&(<div>
-              <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
-              {sel&&(<div className="card">
-                <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
-                <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
-                <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
-                <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
-                <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
-              </div>)}
-            </div>)}
-            {tab==="sfondo"&&(<div>
-              <div style={{marginBottom:12}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
-              <div style={{marginBottom:14}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
-              <div className="lbl" style={{marginBottom:8}}>Preset</div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{[{bg:"#0d0d1a",a:"#00BCD4",l:"Cyan"},{bg:"#1a0a0a",a:"#FF5252",l:"Rosso"},{bg:"#0a1a0d",a:"#4CAF50",l:"Verde"},{bg:"#1a1505",a:"#FFC107",l:"Oro"},{bg:"#0d0a1a",a:"#9C27B0",l:"Viola"},{bg:"#f0f0f0",a:"#1a1a2e",l:"Chiaro"}].map(pr=>(<button key={pr.l} className="btn bs" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>{setBgColor(pr.bg);setElements(p=>p.map(e=>({...e,...(e.highlightColor!==undefined?{highlightColor:pr.a}:{}),
-                ...(e.id==="price"?{color:pr.a}:{}),
-                ...(pr.bg==="#f0f0f0"&&e.color==="#FFFFFF"?{color:"#1a1a2e"}:{}),
-                ...(pr.bg!=="#f0f0f0"&&e.color==="#1a1a2e"?{color:"#FFFFFF"}:{})})));}}><span style={{display:"inline-block",width:10,height:10,background:pr.bg,border:`2px solid ${pr.a}`,borderRadius:2,marginRight:4,verticalAlign:"middle"}}/>{pr.l}</button>))}</div>
+
+            {tab==="stile"&&(<div>
+              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12,marginBottom:12}}>
+                <div onClick={()=>setAccCampi(!accCampi)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",cursor:"pointer",borderBottom:"1px solid #1e1e30",marginBottom:8}}>
+                  <span style={{fontSize:13,fontWeight:800,color:"#00BCD4"}}>📝 Campi Rapidi</span>
+                  <span style={{color:"#555",fontSize:14}}>{accCampi?"▾":"▸"}</span>
+                </div>
+                {accCampi&&(<div>
+                  <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:10,padding:12,marginBottom:14}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><span style={{fontSize:18}}>💬</span><span style={{fontSize:12,fontWeight:700,color:"#25D366"}}>Inserisci istruzioni</span></div>
+                    <textarea className="inp" rows={3} value={waText} onChange={e=>setWaText(e.target.value)} placeholder="Scrivi qui le indicazioni per la nuova offerta" style={{background:"#0d1f16",border:"1px solid #1b3a28",fontSize:12,marginBottom:8}}/>
+                    <div className="row"><button className="btn bg" disabled={waParsing||!waText.trim()} onClick={handleWa} style={{padding:"8px 18px",fontSize:12,opacity:!waText.trim()?.4:1}}>{waParsing?"⏳ Analizzo...":"🤖 Compila con AI"}</button>{waError&&<span style={{fontSize:11,color:"#ef5350"}}>{waError}</span>}</div>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#999",marginBottom:10}}>Campi rapidi</div>
+                  {qf.map((q,i)=>{const el=getEl(q.id),val=q.key?el[q.key]||"":el.text;return(<div className="qf" key={i}><div className="ql">{q.label}</div><input value={val} placeholder={q.ph} onChange={e=>{if(q.key)setEl(q.id,q.key,e.target.value);else setEl(q.id,"text",e.target.value);}}/></div>);})}
+                  <div className="qf"><div className="ql">📋 Servizi</div><textarea className="inp" rows={3} value={getEl("services").text} onChange={e=>setEl("services","text",e.target.value)} style={{background:"transparent",border:"none",fontSize:11,padding:0}}/></div>
+                </div>)}
+              </div>
+              
+              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12}}>
+                <div onClick={()=>setAccElementi(!accElementi)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",cursor:"pointer",borderBottom:"1px solid #1e1e30",marginBottom:8}}>
+                  <span style={{fontSize:13,fontWeight:800,color:"#00BCD4"}}>🎨 Elementi</span>
+                  <span style={{color:"#555",fontSize:14}}>{accElementi?"▾":"▸"}</span>
+                </div>
+                {accElementi&&(<div>
+                  <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
+                  {sel&&(<div className="card">
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
+                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
+                    <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
+                    <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
+                    <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
+                    <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1e30"}}>
+                      <div className="row" style={{marginBottom:6}}><span className="lbl" style={{flex:1,marginBottom:0}}>Ombra testo</span><label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}><input type="checkbox" checked={!!sel.shadowEnabled} onChange={e=>setEl(sel.id,"shadowEnabled",e.target.checked)} style={{accentColor:"#00BCD4",width:15,height:15}}/><span style={{fontSize:11,color:sel.shadowEnabled?"#00BCD4":"#555"}}>Attiva</span></label></div>
+                      {sel.shadowEnabled&&(<>
+                        <div className="row" style={{marginBottom:6}}><div><div style={{fontSize:9,color:"#555"}}>Colore</div><input type="color" value={sel.shadowColor||"#000000"} onChange={e=>setEl(sel.id,"shadowColor",e.target.value)}/></div><div style={{flex:1,marginLeft:8}}><div style={{fontSize:9,color:"#555",marginBottom:2}}>Sfumatura: {sel.shadowBlur||0}px</div><input type="range" min="0" max="40" step="1" value={sel.shadowBlur||0} onChange={e=>setEl(sel.id,"shadowBlur",+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div></div>
+                        <div className="row" style={{gap:8}}><div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:2}}>Offset X: {sel.shadowOffsetX||0}px</div><input type="range" min="-20" max="20" step="1" value={sel.shadowOffsetX||0} onChange={e=>setEl(sel.id,"shadowOffsetX",+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div><div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:2}}>Offset Y: {sel.shadowOffsetY||0}px</div><input type="range" min="-20" max="20" step="1" value={sel.shadowOffsetY||0} onChange={e=>setEl(sel.id,"shadowOffsetY",+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div></div>
+                      </>)}
+                    </div>
+                  </div>)}
+                </div>)}
+              </div>
             </div>)}
           </div>
-          {/* CANVAS */}
+          {/* CANVAS */}}
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"auto"}}>
             <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"100%",maxHeight:"calc(100vh - 100px)",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
           </div>
@@ -411,7 +473,8 @@ export default function App(){
                     <button className="btn bd" style={{padding:"6px 10px",fontSize:11}} onClick={()=>removeOffer(o.id)}>🗑</button>
                   </div>
                   <LiveCanvas offer={o} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
-                    onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,carX:x,carY:y}:oo))}/>
+                    onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,carX:x,carY:y}:oo))}
+                    onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
                 </div>
 
                 {/* RIGHT: form */}
@@ -450,6 +513,27 @@ export default function App(){
                     <div className="row"><span style={{fontSize:9,width:28}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={o.carScale} onChange={e=>updOffer(o.id,"carScale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:10,width:30,textAlign:"right"}}>{Math.round(o.carScale*100)}%</span></div>
                   </div>
                   <div style={{fontSize:10,color:"#555",marginTop:6,textAlign:"center"}}>Trascina l'auto sull'anteprima</div>
+
+                  {/* EXTRAS */}
+                  <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1e30"}}>
+                    <div className="row" style={{marginBottom:6}}><span className="lbl" style={{flex:1,marginBottom:0}}>Elementi extra</span><span style={{fontSize:10,color:"#555"}}>{(o.extras||[]).length} inseriti</span></div>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:5,fontSize:10,marginBottom:6}} onChange={e=>addExtra(o.id,e)}/>
+                    {(o.extras||[]).map((ex,ei)=>(
+                      <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
+                        <div className="row" style={{marginBottom:4}}>
+                          {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
+                          <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
+                          <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>removeExtra(o.id,ei)}>✕</button>
+                        </div>
+                        <div className="row" style={{marginBottom:3}}>
+                          <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>updExtra(o.id,ei,"x",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
+                          <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>updExtra(o.id,ei,"y",+e.target.value)} style={{padding:"3px 5px",fontSize:10}}/>
+                        </div>
+                        <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="2" step="0.02" value={ex.scale} onChange={e=>updExtra(o.id,ei,"scale",+e.target.value)} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
+                      </div>
+                    ))}
+                    {(o.extras||[]).length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina gli extra sull'anteprima</div>}
+                  </div>
                 </div>
               </div>
 
