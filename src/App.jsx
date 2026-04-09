@@ -26,7 +26,7 @@ const makeEls=()=>[
   {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
-function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras){
+function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05){
   ctx.clearRect(0,0,CW,CH);ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);
   if(bg){const s=Math.max(CW/bg.width,CH/bg.height);ctx.drawImage(bg,(CW-bg.width*s)/2,(CH-bg.height*s)/2,bg.width*s,bg.height*s);ctx.globalAlpha=ov;ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);ctx.globalAlpha=1;}
   if(logo){const w=logo.width*lP.scale,h=logo.height*lP.scale;ctx.drawImage(logo,lP.x-w/2,lP.y-h/2,w,h);}
@@ -42,6 +42,8 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras){
   });
   if(car){const w=car.width*cP.scale,h=car.height*cP.scale;ctx.drawImage(car,cP.x-w/2,cP.y-h/2,w,h);}
   if(extras&&extras.length){extras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
+  if(globalExtras&&globalExtras.length){globalExtras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
+  if(watermarkImg){ctx.save();ctx.globalAlpha=wmOpacity;ctx.drawImage(watermarkImg,0,0,CW,CH);ctx.restore();}
 }
 function drawGuides(ctx){
   ctx.save();
@@ -113,7 +115,7 @@ ${text}`;
 const makeFilename=(name,price,num)=>{const n=new Date(),dd=String(n.getDate()).padStart(2,"0"),mm=String(n.getMonth()+1).padStart(2,"0"),yy=n.getFullYear(),hh=String(n.getHours()).padStart(2,"0"),mi=String(n.getMinutes()).padStart(2,"0");const prefix=num!=null?`${num}.`:"";return`${prefix}${(name||"auto").replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ]/g,"_").replace(/_+/g,"_")}_${(price||"0").replace(/[^0-9]/g,"")}_${dd}-${mm}-${yy}_${hh}-${mi}.png`;};
 
 /* ===== LIVE PREVIEW CANVAS (per-offer) ===== */
-function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra}){
+function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra,globalExtras=[],watermarkImg=null,wmOpacity=0.05}){
   const ref=useRef(null);
   const [drag,setDrag]=useState(null);
   const [ds,setDs]=useState(null);
@@ -127,9 +129,9 @@ function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOp
   }),[offer,elements]);
   useEffect(()=>{
     const c=ref.current;if(!c)return;const ctx=c.getContext("2d");
-    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras);
+    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras,globalExtras,watermarkImg,wmOpacity);
     if(showGuides)drawGuides(ctx);
-  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides]);
+  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides,globalExtras,watermarkImg,wmOpacity]);
   const coords=e=>{const c=ref.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
   const onDown=e=>{const p=coords(e);
     /* extras: check top-to-bottom (last = top) */
@@ -168,6 +170,9 @@ export default function App(){
   const [colorPresets,setColorPresets]=useState(()=>{try{const s=localStorage.getItem("colorPresets");return s?JSON.parse(s):DEFAULT_COLOR_PRESETS;}catch{return DEFAULT_COLOR_PRESETS;}});
   const [newPresetColor,setNewPresetColor]=useState("#00BCD4");
   const [newPresetName,setNewPresetName]=useState("");
+  const [globalExtras,setGlobalExtras]=useState([]);
+  const [watermarkImg,setWatermarkImg]=useState(null);
+  const [wmOpacity,setWmOpacity]=useState(0.05);
 
   // Persist API key and color presets
   useEffect(()=>{localStorage.setItem("anthropic_api_key",apiKey);},[apiKey]);
@@ -187,7 +192,7 @@ export default function App(){
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
 
   // Single canvas
-  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab]);
+  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
@@ -197,8 +202,8 @@ export default function App(){
 
   // Canvas drag (single mode)
   const coords=e=>{const c=canvasRef.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
-  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
-  const onMove=e=>{if(!dragging)return;const p=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:p.x-dragStart.x,y:p.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:p.x-dragStart.x,y:p.y-dragStart.y}));else{setEl(dragging,"x",Math.round(p.x-dragStart.x));setEl(dragging,"y",Math.round(p.y-dragStart.y));}};
+  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}for(let i=globalExtras.length-1;i>=0;i--){const ex=globalExtras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDragging("gex_"+i);setDragStart({x:p.x-ex.x,y:p.y-ex.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
+  const onMove=e=>{if(!dragging)return;const pt=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging.startsWith("gex_")){const i=+dragging.split("_")[1];setGlobalExtras(prev=>prev.map((ex,idx)=>idx===i?{...ex,x:Math.round(pt.x-dragStart.x),y:Math.round(pt.y-dragStart.y)}:ex));}else{setEl(dragging,"x",Math.round(pt.x-dragStart.x));setEl(dragging,"y",Math.round(pt.y-dragStart.y));}};
   const onUp=()=>{setDragging(null);setDragStart(null);};
 
   // BATCH
@@ -215,13 +220,13 @@ export default function App(){
   const renderImg=(o,sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras);
+    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras,globalExtras,watermarkImg,wmOpacity);
     return oc.toDataURL("image/png");
   };
   const renderSingle=(sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null);
+    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity);
     return oc.toDataURL("image/png");
   };
 
@@ -437,6 +442,46 @@ export default function App(){
                 </div>
               </div>
 
+              {/* GLOBAL EXTRAS */}
+              <div style={{marginBottom:14}}>
+                <div className="lbl" style={{marginBottom:6}}>🖼 Elementi Extra Globali</div>
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11,marginBottom:6}}
+                  onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);const ex={id:++_exId,img,thumb:dataUrl,x:500,y:500,scale:0.3};setGlobalExtras(p=>[...p,ex]);e.target.value="";}}/>
+                {globalExtras.map((ex,ei)=>(
+                  <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
+                    <div className="row" style={{marginBottom:4}}>
+                      {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
+                      <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
+                      <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>setGlobalExtras(p=>p.filter((_,i)=>i!==ei))}>✕</button>
+                    </div>
+                    <div className="row" style={{marginBottom:3}}>
+                      <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,x:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
+                      <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,y:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
+                    </div>
+                    <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="3" step="0.02" value={ex.scale} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,scale:+e.target.value}:x))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
+                  </div>
+                ))}
+                {globalExtras.length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina gli extra sull'anteprima</div>}
+              </div>
+
+              {/* WATERMARK */}
+              <div style={{marginBottom:14,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
+                <div className="lbl" style={{marginBottom:6}}>💧 Watermark</div>
+                {watermarkImg?(
+                  <div>
+                    <div className="row" style={{marginBottom:8}}>
+                      <div style={{fontSize:11,color:"#00BCD4",flex:1}}>✅ Watermark caricato</div>
+                      <button className="btn bd" style={{padding:"3px 8px",fontSize:10}} onClick={()=>setWatermarkImg(null)}>✕ Rimuovi</button>
+                    </div>
+                    <div className="lbl" style={{marginBottom:3}}>Opacità: {Math.round(wmOpacity*100)}%</div>
+                    <input type="range" min="0.01" max="1" step="0.01" value={wmOpacity} onChange={e=>setWmOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/>
+                  </div>
+                ):(
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11}}
+                    onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setWatermarkImg(img);}}/>
+                )}
+              </div>
+
               <div style={{borderTop:"1px solid #1e1e30",paddingTop:12}}>
                 <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>🏷️ Logo</div>
                 <div style={{marginBottom:12}}><div className="lbl">Immagine logo</div><input type="file" accept="image/png" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setLogoImage,e)}/>{logoImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
@@ -603,6 +648,7 @@ export default function App(){
             {activeOffer?(
               <div style={{maxWidth:"100%",maxHeight:"100%",flex:1,minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
+                  globalExtras={globalExtras} watermarkImg={watermarkImg} wmOpacity={wmOpacity}
                   onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,carX:x,carY:y}:oo))}
                   onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
               </div>
