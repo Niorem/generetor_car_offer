@@ -134,7 +134,7 @@ function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOp
     const car=offer.carImg||carImage;if(car){const w=car.width*offer.carScale,h=car.height*offer.carScale;if(p.x>offer.carX-w/2&&p.x<offer.carX+w/2&&p.y>offer.carY-h/2&&p.y<offer.carY+h/2){setDrag({type:"car"});setDs({x:p.x-offer.carX,y:p.y-offer.carY});}}};
   const onMove=e=>{if(!drag)return;const p=coords(e);if(drag.type==="extra"&&onDragExtra){onDragExtra(drag.idx,Math.round(p.x-ds.x),Math.round(p.y-ds.y));}else if(drag.type==="car"){onDragCar(Math.round(p.x-ds.x),Math.round(p.y-ds.y));}};
   const onUp=()=>{setDrag(null);setDs(null);};
-  return <canvas ref={ref} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{width:"100%",borderRadius:8,cursor:drag?"grabbing":"default",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}/>;
+  return <canvas ref={ref} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"100%",maxHeight:"100%",width:"auto",height:"auto",borderRadius:8,cursor:drag?"grabbing":"default",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}/>;
 }
 
 /* ===== APP ===== */
@@ -490,7 +490,7 @@ export default function App(){
           </div>
           {/* CANVAS */}}
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"hidden"}}>
-            <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"min(100%,calc(100vh - 120px))",maxHeight:"calc(100vh - 120px)",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
+            <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"100%",maxHeight:"100%",width:"auto",height:"auto",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
           </div>
         </div>
       ) : (
@@ -599,7 +599,7 @@ export default function App(){
           {/* RIGHT: CANVAS */}
           <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"hidden",gap:16}}>
             {activeOffer?(
-              <div style={{maxWidth:"min(100%,calc(100vh - 120px))",width:"100%"}}>
+              <div style={{maxWidth:"100%",maxHeight:"100%",flex:1,minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
                   onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,carX:x,carY:y}:oo))}
                   onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
