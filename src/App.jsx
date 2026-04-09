@@ -197,7 +197,7 @@ export default function App(){
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
 
   // Single canvas
-  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity]);
+  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity,wmScale]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
