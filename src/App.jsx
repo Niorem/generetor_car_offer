@@ -26,7 +26,7 @@ const makeEls=()=>[
   {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
-function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1){
+function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1,wmX=500,wmY=500){
   ctx.clearRect(0,0,CW,CH);ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);
   if(bg){const s=Math.max(CW/bg.width,CH/bg.height);ctx.drawImage(bg,(CW-bg.width*s)/2,(CH-bg.height*s)/2,bg.width*s,bg.height*s);ctx.globalAlpha=ov;ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);ctx.globalAlpha=1;}
   if(logo){const w=logo.width*lP.scale,h=logo.height*lP.scale;ctx.drawImage(logo,lP.x-w/2,lP.y-h/2,w,h);}
@@ -43,7 +43,7 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
   if(car){const w=car.width*cP.scale,h=car.height*cP.scale;ctx.drawImage(car,cP.x-w/2,cP.y-h/2,w,h);}
   if(extras&&extras.length){extras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
   if(globalExtras&&globalExtras.length){globalExtras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
-  if(watermarkImg){ctx.save();ctx.globalAlpha=wmOpacity;const ww=watermarkImg.width*(wmScale||1),wh=watermarkImg.height*(wmScale||1);ctx.drawImage(watermarkImg,(CW-ww)/2,(CH-wh)/2,ww,wh);ctx.restore();}
+  if(watermarkImg){ctx.save();ctx.globalAlpha=wmOpacity;const ww=watermarkImg.width*(wmScale||1),wh=watermarkImg.height*(wmScale||1);ctx.drawImage(watermarkImg,(wmX||CW/2)-ww/2,(wmY||CH/2)-wh/2,ww,wh);ctx.restore();}
 }
 function drawGuides(ctx){
   ctx.save();
@@ -115,7 +115,7 @@ ${text}`;
 const makeFilename=(name,price,num)=>{const n=new Date(),dd=String(n.getDate()).padStart(2,"0"),mm=String(n.getMonth()+1).padStart(2,"0"),yy=n.getFullYear(),hh=String(n.getHours()).padStart(2,"0"),mi=String(n.getMinutes()).padStart(2,"0");const prefix=num!=null?`${num}.`:"";return`${prefix}${(name||"auto").replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ]/g,"_").replace(/_+/g,"_")}_${(price||"0").replace(/[^0-9]/g,"")}_${dd}-${mm}-${yy}_${hh}-${mi}.png`;};
 
 /* ===== LIVE PREVIEW CANVAS (per-offer) ===== */
-function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1}){
+function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1,wmX=500,wmY=500}){
   const ref=useRef(null);
   const [drag,setDrag]=useState(null);
   const [ds,setDs]=useState(null);
@@ -129,9 +129,9 @@ function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOp
   }),[offer,elements]);
   useEffect(()=>{
     const c=ref.current;if(!c)return;const ctx=c.getContext("2d");
-    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras,globalExtras,watermarkImg,wmOpacity,wmScale);
+    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY);
     if(showGuides)drawGuides(ctx);
-  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides,globalExtras,watermarkImg,wmOpacity,wmScale]);
+  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY]);
   const coords=e=>{const c=ref.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
   const onDown=e=>{const p=coords(e);
     /* extras: check top-to-bottom (last = top) */
@@ -174,6 +174,8 @@ export default function App(){
   const [watermarkImg,setWatermarkImg]=useState(null);
   const [wmOpacity,setWmOpacity]=useState(0.05);
   const [wmScale,setWmScale]=useState(1);
+  const [wmX,setWmX]=useState(500);
+  const [wmY,setWmY]=useState(500);
   const [accSfondo,setAccSfondo]=useState(true);
   const [accLogo,setAccLogo]=useState(false);
   const [accExtras,setAccExtras]=useState(false);
@@ -197,7 +199,7 @@ export default function App(){
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
 
   // Single canvas
-  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity,wmScale]);
+  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
@@ -207,8 +209,8 @@ export default function App(){
 
   // Canvas drag (single mode)
   const coords=e=>{const c=canvasRef.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
-  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}for(let i=globalExtras.length-1;i>=0;i--){const ex=globalExtras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDragging("gex_"+i);setDragStart({x:p.x-ex.x,y:p.y-ex.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
-  const onMove=e=>{if(!dragging)return;const pt=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging.startsWith("gex_")){const i=+dragging.split("_")[1];setGlobalExtras(prev=>prev.map((ex,idx)=>idx===i?{...ex,x:Math.round(pt.x-dragStart.x),y:Math.round(pt.y-dragStart.y)}:ex));}else{setEl(dragging,"x",Math.round(pt.x-dragStart.x));setEl(dragging,"y",Math.round(pt.y-dragStart.y));}};
+  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}if(watermarkImg){const ww=watermarkImg.width*wmScale,wh=watermarkImg.height*wmScale;if(p.x>wmX-ww/2&&p.x<wmX+ww/2&&p.y>wmY-wh/2&&p.y<wmY+wh/2){setDragging("watermark");setDragStart({x:p.x-wmX,y:p.y-wmY});return;}}for(let i=globalExtras.length-1;i>=0;i--){const ex=globalExtras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDragging("gex_"+i);setDragStart({x:p.x-ex.x,y:p.y-ex.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
+  const onMove=e=>{if(!dragging)return;const pt=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="watermark"){setWmX(Math.round(pt.x-dragStart.x));setWmY(Math.round(pt.y-dragStart.y));}else if(dragging.startsWith("gex_")){const i=+dragging.split("_")[1];setGlobalExtras(prev=>prev.map((ex,idx)=>idx===i?{...ex,x:Math.round(pt.x-dragStart.x),y:Math.round(pt.y-dragStart.y)}:ex));}else{setEl(dragging,"x",Math.round(pt.x-dragStart.x));setEl(dragging,"y",Math.round(pt.y-dragStart.y));}};
   const onUp=()=>{setDragging(null);setDragStart(null);};
 
   // BATCH
@@ -225,13 +227,13 @@ export default function App(){
   const renderImg=(o,sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras,globalExtras,watermarkImg,wmOpacity,wmScale);
+    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY);
     return oc.toDataURL("image/png");
   };
   const renderSingle=(sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);
+    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY);
     return oc.toDataURL("image/png");
   };
 
@@ -482,10 +484,15 @@ export default function App(){
                         <div style={{fontSize:11,color:"#00BCD4",flex:1}}>✅ Watermark caricato</div>
                         <button className="btn bd" style={{padding:"3px 8px",fontSize:10}} onClick={()=>setWatermarkImg(null)}>✕ Rimuovi</button>
                       </div>
+                      <div className="row" style={{marginBottom:8}}>
+                        <div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:2}}>X</div><input className="inp" type="number" value={wmX} onChange={e=>setWmX(+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/></div>
+                        <div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:2}}>Y</div><input className="inp" type="number" value={wmY} onChange={e=>setWmY(+e.target.value)} style={{padding:"4px 6px",fontSize:11}}/></div>
+                      </div>
                       <div className="lbl" style={{marginBottom:3}}>Opacità: {Math.round(wmOpacity*100)}%</div>
                       <input type="range" min="0.01" max="1" step="0.01" value={wmOpacity} onChange={e=>setWmOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4",marginBottom:8}}/>
                       <div className="lbl" style={{marginBottom:3}}>Dimensione: {Math.round(wmScale*100)}%</div>
-                      <input type="range" min="0.05" max="3" step="0.05" value={wmScale} onChange={e=>setWmScale(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/>
+                      <input type="range" min="0.05" max="3" step="0.05" value={wmScale} onChange={e=>setWmScale(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4",marginBottom:4}}/>
+                      <div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina il watermark sull'anteprima</div>
                     </div>
                   ):(
                     <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11}}
@@ -658,7 +665,7 @@ export default function App(){
             {activeOffer?(
               <div style={{maxWidth:"100%",maxHeight:"100%",flex:1,minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
-                  globalExtras={globalExtras} watermarkImg={watermarkImg} wmOpacity={wmOpacity} wmScale={wmScale}
+                  globalExtras={globalExtras} watermarkImg={watermarkImg} wmOpacity={wmOpacity} wmScale={wmScale} wmX={wmX} wmY={wmY}
                   onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,carX:x,carY:y}:oo))}
                   onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
               </div>
