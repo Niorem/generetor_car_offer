@@ -337,7 +337,7 @@ export default function App(){
   const qf=[{id:"carName",label:"🚗 Nome Auto",ph:"es. MERCEDES GLC COUPÉ"},{id:"carName",key:"highlightWord",label:"✨ Evidenziata",ph:"es. GLC COUPÉ"},{id:"specs",label:"⚙️ Caratteristiche",ph:"es. 220D MHEV 4MATIC"},{id:"duration",label:"📅 Durata / KM",ph:"es. 48 MESI – 60.000 KM"},{id:"deposit",label:"💰 Anticipo",ph:"es. ANTICIPO 2.000€ I.E."},{id:"price",label:"🏷️ Canone",ph:"es. 689"},{id:"priceSuffix",label:"Suffisso",ph:"€/MESE"},{id:"priceNote",label:"Nota",ph:"IVA ESCLUSA"},{id:"header",label:"Intestazione",ph:"NOLEGGIO LUNGO TERMINE"}];
 
   return (
-    <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#e0e0e0",fontFamily:"'Segoe UI',system-ui,sans-serif",display:"flex",flexDirection:"column"}}>
+    <div style={{height:"100vh",overflow:"hidden",background:"#0a0a0f",color:"#e0e0e0",fontFamily:"'Segoe UI',system-ui,sans-serif",display:"flex",flexDirection:"column"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -393,7 +393,7 @@ export default function App(){
 
       {/* MAIN CONTENT */}
       {!isBatch ? (
-        <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+        <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
           {/* SIDEBAR */}
           <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12}}>
             {tab==="setup"&&(<div>
@@ -495,7 +495,7 @@ export default function App(){
         </div>
       ) : (
         /* ==================== BATCH MODE — SETUP LAYOUT ==================== */
-        <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+        <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
           {/* LEFT SIDEBAR */}
           <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12,display:"flex",flexDirection:"column",gap:10}}>
 
