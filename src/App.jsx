@@ -489,7 +489,7 @@ export default function App(){
             </div>)}
           </div>
           {/* CANVAS */}}
-          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"auto"}}>
+          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"hidden"}}>
             <canvas ref={canvasRef} width={CW} height={CH} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{maxWidth:"min(100%,calc(100vh - 120px))",maxHeight:"calc(100vh - 120px)",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.6)",cursor:dragging?"grabbing":"default"}}/>
           </div>
         </div>
@@ -597,7 +597,7 @@ export default function App(){
           </div>
 
           {/* RIGHT: CANVAS */}
-          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"auto",gap:16}}>
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16,background:"#08080d",overflow:"hidden",gap:16}}>
             {activeOffer?(
               <div style={{maxWidth:"min(100%,calc(100vh - 120px))",width:"100%"}}>
                 <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
