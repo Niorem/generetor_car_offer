@@ -45,7 +45,6 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras){
 }
 function drawGuides(ctx){
   ctx.save();
-  /* Solid bright lines */
   ctx.setLineDash([10,5]);ctx.lineWidth=2;ctx.strokeStyle="rgba(0,188,212,0.7)";
   /* Left */
   ctx.beginPath();ctx.moveTo(GL,0);ctx.lineTo(GL,CH);ctx.stroke();
@@ -55,10 +54,14 @@ function drawGuides(ctx){
   ctx.beginPath();ctx.moveTo(0,GT);ctx.lineTo(CW,GT);ctx.stroke();
   /* Bottom */
   ctx.beginPath();ctx.moveTo(0,GB);ctx.lineTo(CW,GB);ctx.stroke();
-  /* Small labels */
+  /* Center vertical */
+  ctx.lineWidth=1;ctx.strokeStyle="rgba(0,188,212,0.35)";ctx.setLineDash([6,6]);
+  ctx.beginPath();ctx.moveTo(CW/2,0);ctx.lineTo(CW/2,CH);ctx.stroke();
+  /* Labels */
   ctx.setLineDash([]);ctx.font='bold 11px sans-serif';ctx.fillStyle="rgba(0,188,212,0.55)";ctx.textAlign="left";ctx.textBaseline="top";
   ctx.fillText("L",GL+4,GT+4);ctx.textAlign="right";ctx.fillText("R",GR-4,GT+4);
-  ctx.textAlign="left";ctx.fillText("T",GL+4,GT+4);ctx.fillText("B",GL+4,GB-16);
+  ctx.textAlign="center";ctx.fillText("C",CW/2,GT+4);
+  ctx.textAlign="left";ctx.fillText("B",GL+4,GB-16);
   ctx.restore();
 }
 function readFile(file){return new Promise(res=>{const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>res({img,dataUrl:ev.target.result});img.src=ev.target.result;};r.readAsDataURL(file);});}
@@ -194,7 +197,7 @@ export default function App(){
 
   // Canvas drag (single mode)
   const coords=e=>{const c=canvasRef.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
-  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
+  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
   const onMove=e=>{if(!dragging)return;const p=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:p.x-dragStart.x,y:p.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:p.x-dragStart.x,y:p.y-dragStart.y}));else{setEl(dragging,"x",Math.round(p.x-dragStart.x));setEl(dragging,"y",Math.round(p.y-dragStart.y));}};
   const onUp=()=>{setDragging(null);setDragStart(null);};
 
