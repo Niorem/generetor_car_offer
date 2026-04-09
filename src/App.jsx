@@ -508,7 +508,6 @@ export default function App(){
                 <div style={{fontSize:10,fontWeight:700,color:"#777",textTransform:"uppercase",letterSpacing:".6px"}}>Offerte ({offers.length})</div>
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn bp" style={{padding:"4px 10px",fontSize:11}} onClick={()=>addOffer(null)}>➕ Nuova</button>
-                  <button className="btn bs" style={{padding:"4px 10px",fontSize:11}} onClick={dupFromCurrent}>📋 Copia</button>
                 </div>
               </div>
               {offers.length===0&&(
@@ -613,7 +612,6 @@ export default function App(){
                 <div style={{fontSize:16,color:"#666",textAlign:"center"}}>Nessuna offerta. Inizia aggiungendone una.</div>
                 <div style={{display:"flex",gap:10}}>
                   <button className="btn bp" style={{padding:"12px 24px",fontSize:14}} onClick={()=>addOffer(null)}>➕ Nuova offerta</button>
-                  <button className="btn bs" style={{padding:"12px 24px",fontSize:14}} onClick={dupFromCurrent}>📋 Copia da offerta singola</button>
                 </div>
               </div>
             )}
