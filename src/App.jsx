@@ -26,7 +26,7 @@ const makeEls=()=>[
   {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
-function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05){
+function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1){
   ctx.clearRect(0,0,CW,CH);ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);
   if(bg){const s=Math.max(CW/bg.width,CH/bg.height);ctx.drawImage(bg,(CW-bg.width*s)/2,(CH-bg.height*s)/2,bg.width*s,bg.height*s);ctx.globalAlpha=ov;ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);ctx.globalAlpha=1;}
   if(logo){const w=logo.width*lP.scale,h=logo.height*lP.scale;ctx.drawImage(logo,lP.x-w/2,lP.y-h/2,w,h);}
@@ -43,7 +43,7 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
   if(car){const w=car.width*cP.scale,h=car.height*cP.scale;ctx.drawImage(car,cP.x-w/2,cP.y-h/2,w,h);}
   if(extras&&extras.length){extras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
   if(globalExtras&&globalExtras.length){globalExtras.forEach(ex=>{if(!ex.img)return;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;ctx.drawImage(ex.img,ex.x-w/2,ex.y-h/2,w,h);});}
-  if(watermarkImg){ctx.save();ctx.globalAlpha=wmOpacity;ctx.drawImage(watermarkImg,0,0,CW,CH);ctx.restore();}
+  if(watermarkImg){ctx.save();ctx.globalAlpha=wmOpacity;const ww=watermarkImg.width*(wmScale||1),wh=watermarkImg.height*(wmScale||1);ctx.drawImage(watermarkImg,(CW-ww)/2,(CH-wh)/2,ww,wh);ctx.restore();}
 }
 function drawGuides(ctx){
   ctx.save();
@@ -115,7 +115,7 @@ ${text}`;
 const makeFilename=(name,price,num)=>{const n=new Date(),dd=String(n.getDate()).padStart(2,"0"),mm=String(n.getMonth()+1).padStart(2,"0"),yy=n.getFullYear(),hh=String(n.getHours()).padStart(2,"0"),mi=String(n.getMinutes()).padStart(2,"0");const prefix=num!=null?`${num}.`:"";return`${prefix}${(name||"auto").replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ]/g,"_").replace(/_+/g,"_")}_${(price||"0").replace(/[^0-9]/g,"")}_${dd}-${mm}-${yy}_${hh}-${mi}.png`;};
 
 /* ===== LIVE PREVIEW CANVAS (per-offer) ===== */
-function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra,globalExtras=[],watermarkImg=null,wmOpacity=0.05}){
+function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,showGuides,onDragCar,onDragExtra,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1}){
   const ref=useRef(null);
   const [drag,setDrag]=useState(null);
   const [ds,setDs]=useState(null);
@@ -129,9 +129,9 @@ function LiveCanvas({offer,elements,bgImage,carImage,logoImage,bgColor,overlayOp
   }),[offer,elements]);
   useEffect(()=>{
     const c=ref.current;if(!c)return;const ctx=c.getContext("2d");
-    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras,globalExtras,watermarkImg,wmOpacity);
+    draw(ctx,buildEls(),bgImage,offer.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:offer.carX,y:offer.carY,scale:offer.carScale},logoPos,offer.extras,globalExtras,watermarkImg,wmOpacity,wmScale);
     if(showGuides)drawGuides(ctx);
-  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides,globalExtras,watermarkImg,wmOpacity]);
+  },[offer,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,logoPos,buildEls,showGuides,globalExtras,watermarkImg,wmOpacity,wmScale]);
   const coords=e=>{const c=ref.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
   const onDown=e=>{const p=coords(e);
     /* extras: check top-to-bottom (last = top) */
@@ -173,6 +173,11 @@ export default function App(){
   const [globalExtras,setGlobalExtras]=useState([]);
   const [watermarkImg,setWatermarkImg]=useState(null);
   const [wmOpacity,setWmOpacity]=useState(0.05);
+  const [wmScale,setWmScale]=useState(1);
+  const [accSfondo,setAccSfondo]=useState(true);
+  const [accLogo,setAccLogo]=useState(false);
+  const [accExtras,setAccExtras]=useState(false);
+  const [accWm,setAccWm]=useState(false);
 
   // Persist API key and color presets
   useEffect(()=>{localStorage.setItem("anthropic_api_key",apiKey);},[apiKey]);
@@ -192,7 +197,7 @@ export default function App(){
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
 
   // Single canvas
-  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity]);
+  useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
@@ -220,13 +225,13 @@ export default function App(){
   const renderImg=(o,sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras,globalExtras,watermarkImg,wmOpacity);
+    draw(ctx,buildEls(o),bgImage,o.carImg||carImage,logoImage,bgColor,overlayOpacity,{x:o.carX,y:o.carY,scale:o.carScale},logoPos,o.extras,globalExtras,watermarkImg,wmOpacity,wmScale);
     return oc.toDataURL("image/png");
   };
   const renderSingle=(sz)=>{
     const oc=document.createElement("canvas");oc.width=sz;oc.height=sz;
     const ctx=oc.getContext("2d");const s=sz/CW;ctx.scale(s,s);
-    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity);
+    draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale);
     return oc.toDataURL("image/png");
   };
 
@@ -406,7 +411,7 @@ export default function App(){
           <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12}}>
             {tab==="setup"&&(<div>
               {/* API Key */}
-              <div style={{marginBottom:14,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
+              <div style={{marginBottom:12,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
                 <div className="lbl" style={{marginBottom:4}}>🔑 Anthropic API Key</div>
                 <div className="row" style={{gap:6}}>
                   <input className="inp" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{fontSize:11,fontFamily:"monospace",flex:1}}/>
@@ -415,82 +420,87 @@ export default function App(){
                 <div style={{fontSize:9,color:apiKey?"#4CAF50":"#ef5350",marginTop:4}}>{apiKey?"✅ API key impostata":"⚠️ Necessaria per Compila con AI"}</div>
               </div>
 
-              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12,marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>⚙ Sfondo</div>
-                <div style={{marginBottom:12}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
-                <div style={{marginBottom:14}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
-                <div style={{marginBottom:12}}><div className="lbl">Immagine sfondo</div><input type="file" accept="image/*" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setBgImage,e)}/>{bgImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
+              {/* ── SFONDO ── */}
+              {[{label:"🌅 Sfondo",open:accSfondo,toggle:()=>setAccSfondo(p=>!p),content:(
                 <div>
-                  <div className="lbl" style={{marginBottom:6}}>Preset colori accento</div>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
-                    {colorPresets.map(pr=>(
-                      <div key={pr.id} style={{display:"flex",alignItems:"center",gap:2}}>
-                        <button className="btn bs" style={{fontSize:10,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}} onClick={()=>applyAccentColor(pr.accentColor)}>
-                          <span style={{display:"inline-block",width:10,height:10,background:pr.accentColor,borderRadius:2,flexShrink:0}}/>
-                          {pr.label}
-                        </button>
-                        <button onClick={()=>deleteColorPreset(pr.id)} title="Rimuovi" style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:11,padding:"2px 4px",lineHeight:1}}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                    <input type="color" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:32,height:28,border:"none",background:"none",cursor:"pointer",padding:0,borderRadius:4}}/>
-                    <input className="inp" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:80,padding:"4px 6px",fontSize:11,fontFamily:"monospace"}} placeholder="#00BCD4"/>
-                    <input className="inp" value={newPresetName} onChange={e=>setNewPresetName(e.target.value)} style={{flex:1,minWidth:60,padding:"4px 6px",fontSize:11}} placeholder="Nome preset"/>
-                    <button className="btn bp" onClick={saveColorPreset} disabled={!newPresetName.trim()} style={{padding:"5px 10px",fontSize:11,opacity:!newPresetName.trim()?0.4:1}}>💾 Salva</button>
+                  <div style={{marginBottom:10}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
+                  <div style={{marginBottom:10}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
+                  <div style={{marginBottom:10}}><div className="lbl">Immagine sfondo</div><input type="file" accept="image/*" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setBgImage,e)}/>{bgImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅ Caricata</div>}</div>
+                  <div>
+                    <div className="lbl" style={{marginBottom:6}}>Preset colori accento</div>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+                      {colorPresets.map(pr=>(
+                        <div key={pr.id} style={{display:"flex",alignItems:"center",gap:2}}>
+                          <button className="btn bs" style={{fontSize:10,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}} onClick={()=>applyAccentColor(pr.accentColor)}>
+                            <span style={{display:"inline-block",width:10,height:10,background:pr.accentColor,borderRadius:2,flexShrink:0}}/>
+                            {pr.label}
+                          </button>
+                          <button onClick={()=>deleteColorPreset(pr.id)} title="Rimuovi" style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:11,padding:"2px 4px",lineHeight:1}}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                      <input type="color" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:32,height:28,border:"none",background:"none",cursor:"pointer",padding:0,borderRadius:4}}/>
+                      <input className="inp" value={newPresetColor} onChange={e=>setNewPresetColor(e.target.value)} style={{width:80,padding:"4px 6px",fontSize:11,fontFamily:"monospace"}} placeholder="#00BCD4"/>
+                      <input className="inp" value={newPresetName} onChange={e=>setNewPresetName(e.target.value)} style={{flex:1,minWidth:60,padding:"4px 6px",fontSize:11}} placeholder="Nome preset"/>
+                      <button className="btn bp" onClick={saveColorPreset} disabled={!newPresetName.trim()} style={{padding:"5px 10px",fontSize:11,opacity:!newPresetName.trim()?0.4:1}}>💾 Salva</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* GLOBAL EXTRAS */}
-              <div style={{marginBottom:14}}>
-                <div className="lbl" style={{marginBottom:6}}>🖼 Elementi Extra Globali</div>
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11,marginBottom:6}}
-                  onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);const ex={id:++_exId,img,thumb:dataUrl,x:500,y:500,scale:0.3};setGlobalExtras(p=>[...p,ex]);e.target.value="";}}/>
-                {globalExtras.map((ex,ei)=>(
-                  <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
-                    <div className="row" style={{marginBottom:4}}>
-                      {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
-                      <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
-                      <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>setGlobalExtras(p=>p.filter((_,i)=>i!==ei))}>✕</button>
-                    </div>
-                    <div className="row" style={{marginBottom:3}}>
-                      <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,x:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
-                      <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,y:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
-                    </div>
-                    <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="3" step="0.02" value={ex.scale} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,scale:+e.target.value}:x))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
-                  </div>
-                ))}
-                {globalExtras.length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center"}}>Trascina gli extra sull'anteprima</div>}
-              </div>
-
-              {/* WATERMARK */}
-              <div style={{marginBottom:14,padding:"10px",background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:8}}>
-                <div className="lbl" style={{marginBottom:6}}>💧 Watermark</div>
-                {watermarkImg?(
-                  <div>
-                    <div className="row" style={{marginBottom:8}}>
-                      <div style={{fontSize:11,color:"#00BCD4",flex:1}}>✅ Watermark caricato</div>
-                      <button className="btn bd" style={{padding:"3px 8px",fontSize:10}} onClick={()=>setWatermarkImg(null)}>✕ Rimuovi</button>
-                    </div>
-                    <div className="lbl" style={{marginBottom:3}}>Opacità: {Math.round(wmOpacity*100)}%</div>
-                    <input type="range" min="0.01" max="1" step="0.01" value={wmOpacity} onChange={e=>setWmOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/>
-                  </div>
-                ):(
-                  <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11}}
-                    onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setWatermarkImg(img);}}/>
-                )}
-              </div>
-
-              <div style={{borderTop:"1px solid #1e1e30",paddingTop:12}}>
-                <div style={{fontSize:12,fontWeight:800,color:"#00BCD4",marginBottom:10}}>🏷️ Logo</div>
-                <div style={{marginBottom:12}}><div className="lbl">Immagine logo</div><input type="file" accept="image/png" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setLogoImage,e)}/>{logoImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅</div>}</div>
-                <div style={{marginBottom:10}}>
+              )},{label:"🏷️ Logo",open:accLogo,toggle:()=>setAccLogo(p=>!p),content:(
+                <div>
+                  <div style={{marginBottom:10}}><div className="lbl">Immagine logo</div><input type="file" accept="image/png" className="fi" style={{fontSize:10}} onChange={e=>loadImg(setLogoImage,e)}/>{logoImage&&<div style={{fontSize:10,color:"#00BCD4",marginTop:2}}>✅ Caricato</div>}</div>
                   <div className="lbl">Posizione Logo</div>
                   <div className="row" style={{marginBottom:4}}><span style={{fontSize:9,width:12}}>X</span><input className="inp" type="number" value={logoPos.x} onChange={e=>setLogoPos(p=>({...p,x:+e.target.value}))} style={{padding:"3px 5px",fontSize:10}}/><span style={{fontSize:9,width:12}}>Y</span><input className="inp" type="number" value={logoPos.y} onChange={e=>setLogoPos(p=>({...p,y:+e.target.value}))} style={{padding:"3px 5px",fontSize:10}}/></div>
                   <div className="row"><span style={{fontSize:9,width:24}}>Scala</span><input type="range" min="0.02" max="1" step="0.01" value={logoPos.scale} onChange={e=>setLogoPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(logoPos.scale*100)}%</span></div>
                 </div>
-              </div>
+              )},{label:"🖼 Elementi Extra Globali",open:accExtras,toggle:()=>setAccExtras(p=>!p),content:(
+                <div>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11,marginBottom:8}}
+                    onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img,dataUrl}=await readFile(f);const ex={id:++_exId,img,thumb:dataUrl,x:500,y:500,scale:0.3};setGlobalExtras(p=>[...p,ex]);e.target.value="";}}/>
+                  {globalExtras.map((ex,ei)=>(
+                    <div key={ex.id} style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:8,marginBottom:5}}>
+                      <div className="row" style={{marginBottom:4}}>
+                        {ex.thumb&&<img src={ex.thumb} alt="" style={{width:28,height:28,objectFit:"contain",borderRadius:3,background:"#14141f"}}/>}
+                        <span style={{flex:1,fontSize:10,color:"#aaa",fontWeight:600}}>Extra {ei+1}</span>
+                        <button className="btn bd" style={{padding:"3px 7px",fontSize:9}} onClick={()=>setGlobalExtras(p=>p.filter((_,i)=>i!==ei))}>✕</button>
+                      </div>
+                      <div className="row" style={{marginBottom:3}}>
+                        <span style={{fontSize:8,width:10}}>X</span><input className="inp" type="number" value={ex.x} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,x:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
+                        <span style={{fontSize:8,width:10}}>Y</span><input className="inp" type="number" value={ex.y} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,y:+e.target.value}:x))} style={{padding:"3px 5px",fontSize:10}}/>
+                      </div>
+                      <div className="row"><span style={{fontSize:8,width:24}}>Scala</span><input type="range" min="0.02" max="3" step="0.02" value={ex.scale} onChange={e=>setGlobalExtras(p=>p.map((x,i)=>i===ei?{...x,scale:+e.target.value}:x))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:9,width:28,textAlign:"right"}}>{Math.round(ex.scale*100)}%</span></div>
+                    </div>
+                  ))}
+                  {globalExtras.length>0&&<div style={{fontSize:9,color:"#555",textAlign:"center",marginTop:4}}>Trascina gli extra sull'anteprima</div>}
+                </div>
+              )},{label:"💧 Watermark",open:accWm,toggle:()=>setAccWm(p=>!p),content:(
+                <div>
+                  {watermarkImg?(
+                    <div>
+                      <div className="row" style={{marginBottom:8}}>
+                        <div style={{fontSize:11,color:"#00BCD4",flex:1}}>✅ Watermark caricato</div>
+                        <button className="btn bd" style={{padding:"3px 8px",fontSize:10}} onClick={()=>setWatermarkImg(null)}>✕ Rimuovi</button>
+                      </div>
+                      <div className="lbl" style={{marginBottom:3}}>Opacità: {Math.round(wmOpacity*100)}%</div>
+                      <input type="range" min="0.01" max="1" step="0.01" value={wmOpacity} onChange={e=>setWmOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4",marginBottom:8}}/>
+                      <div className="lbl" style={{marginBottom:3}}>Dimensione: {Math.round(wmScale*100)}%</div>
+                      <input type="range" min="0.05" max="3" step="0.05" value={wmScale} onChange={e=>setWmScale(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/>
+                    </div>
+                  ):(
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="fi" style={{padding:6,fontSize:11}}
+                      onChange={async e=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setWatermarkImg(img);}}/>
+                  )}
+                </div>
+              )}].map(sec=>(
+                <div key={sec.label} style={{marginBottom:6,borderRadius:8,border:"1px solid #1a1a28",overflow:"hidden"}}>
+                  <div onClick={sec.toggle} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",cursor:"pointer",background:"#0d0d18",userSelect:"none"}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#e0e0e0"}}>{sec.label}</span>
+                    <span style={{color:"#555",fontSize:14,transition:"transform .2s",transform:sec.open?"rotate(90deg)":"rotate(0deg)"}}>▸</span>
+                  </div>
+                  {sec.open&&<div style={{padding:"12px",background:"#09090f",borderTop:"1px solid #1a1a28"}}>{sec.content}</div>}
+                </div>
+              ))}
             </div>)}
 
             {tab==="stile"&&(<div>
@@ -648,7 +658,7 @@ export default function App(){
             {activeOffer?(
               <div style={{maxWidth:"100%",maxHeight:"100%",flex:1,minHeight:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <LiveCanvas offer={activeOffer} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
-                  globalExtras={globalExtras} watermarkImg={watermarkImg} wmOpacity={wmOpacity}
+                  globalExtras={globalExtras} watermarkImg={watermarkImg} wmOpacity={wmOpacity} wmScale={wmScale}
                   onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,carX:x,carY:y}:oo))}
                   onDragExtra={(idx,x,y)=>setOffers(p=>p.map(oo=>oo.id===activeOffer.id?{...oo,extras:oo.extras.map((ex,i)=>i===idx?{...ex,x,y}:ex)}:oo))}/>
               </div>
