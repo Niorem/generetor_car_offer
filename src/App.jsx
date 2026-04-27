@@ -389,7 +389,7 @@ export default function App(){
         .acc-body{padding:10px 12px;border-top:1px solid #1e1e30}
         .offer-row{display:flex;gap:18px;background:#0d0d16;border:1px solid #1a1a28;border-radius:10px;padding:14px;margin-bottom:12px;transition:border .2s;align-items:flex-start}
         .offer-row:hover{border-color:#252545}
-        .offer-preview{flex:0 0 33vw;min-width:320px;max-width:720px}
+        .offer-preview{flex:0 0 50vw;min-width:340px;max-width:1000px}
         .offer-form{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
         @media (max-width:900px){.offer-row{flex-direction:column}.offer-preview{flex:1 1 100%;width:100%;max-width:100%}}
         .offer-form .ofi{margin-bottom:1px}
