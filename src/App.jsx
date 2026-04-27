@@ -26,6 +26,68 @@ const makeEls=()=>[
   {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
+const HAS_HTML = s => /<\s*(b|u|i|color|br|\/[buic])/i.test(s || "");
+const HTML_PREP = s => (s || "").replace(/<br\s*\/?>/gi, "\n");
+function parseInline(text) {
+  const out = []; const stack = []; let buf = ""; let i = 0;
+  const cur = () => { const r = { bold: false, italic: false, underline: false, color: null }; stack.forEach(s => { if (s.bold) r.bold = true; if (s.italic) r.italic = true; if (s.underline) r.underline = true; if (s.color) r.color = s.color; }); return r; };
+  const flush = () => { if (buf) { out.push({ text: buf, ...cur() }); buf = ""; } };
+  while (i < text.length) {
+    if (text[i] === "<") {
+      const end = text.indexOf(">", i);
+      if (end > i) {
+        const body = text.substring(i + 1, end);
+        const close = body.startsWith("/");
+        const inner = close ? body.slice(1) : body;
+        const m = inner.match(/^(\w+)(?:\s*=\s*"?([^"]+?)"?)?$/);
+        if (m) {
+          const name = m[1].toLowerCase(); const val = m[2];
+          if (["b", "i", "u", "color"].includes(name)) {
+            flush();
+            if (close) { for (let j = stack.length - 1; j >= 0; j--) if (stack[j]._n === name) { stack.splice(j, 1); break; } }
+            else {
+              const it = { _n: name };
+              if (name === "b") it.bold = true;
+              if (name === "i") it.italic = true;
+              if (name === "u") it.underline = true;
+              if (name === "color" && val) it.color = val;
+              stack.push(it);
+            }
+            i = end + 1; continue;
+          }
+        }
+      }
+    }
+    buf += text[i++];
+  }
+  flush();
+  return out;
+}
+function drawTokens(ctx, el, tokens, x, y) {
+  const fontFor = t => `${t.italic ? "italic " : ""}${t.bold ? "900" : el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
+  let totalW = 0;
+  tokens.forEach(t => { ctx.font = fontFor(t); totalW += ctx.measureText(t.text).width; });
+  let sx = x;
+  if (el.textAlign === "center") sx = x - totalW / 2;
+  else if (el.textAlign === "right") sx = x - totalW;
+  const savedAlign = ctx.textAlign; ctx.textAlign = "left";
+  let cx = sx;
+  tokens.forEach(t => {
+    ctx.font = fontFor(t);
+    ctx.fillStyle = t.color || el.color;
+    ctx.fillText(t.text, cx, y);
+    const w = ctx.measureText(t.text).width;
+    if (t.underline) {
+      ctx.strokeStyle = t.color || el.color;
+      ctx.lineWidth = Math.max(1, el.fontSize * 0.06);
+      const uy = y + el.fontSize * 0.4;
+      ctx.beginPath(); ctx.moveTo(cx, uy); ctx.lineTo(cx + w, uy); ctx.stroke();
+    }
+    cx += w;
+  });
+  ctx.textAlign = savedAlign;
+}
+
 function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkImg=null,wmOpacity=0.05,wmScale=1,wmX=500,wmY=500){
   ctx.clearRect(0,0,CW,CH);ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);
   if(bg){const s=Math.max(CW/bg.width,CH/bg.height);ctx.drawImage(bg,(CW-bg.width*s)/2,(CH-bg.height*s)/2,bg.width*s,bg.height*s);ctx.globalAlpha=ov;ctx.fillStyle=bgC;ctx.fillRect(0,0,CW,CH);ctx.globalAlpha=1;}
@@ -34,10 +96,10 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
     if(!el.visible)return;ctx.save();
     ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.textAlign=el.textAlign||"center";ctx.textBaseline="middle";
     if(el.shadowEnabled){ctx.shadowColor=el.shadowColor||"rgba(0,0,0,0.8)";ctx.shadowBlur=el.shadowBlur||0;ctx.shadowOffsetX=el.shadowOffsetX||0;ctx.shadowOffsetY=el.shadowOffsetY||0;}else{ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;}
-    if(el.id==="services"){el.text.split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${h?"700":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.fillStyle=h?(el.highlightColor||"#00BCD4"):el.color;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));});ctx.restore();return;}
+    if(el.id==="services"){HTML_PREP(el.text).split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${h?"700":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const baseColor=h?(el.highlightColor||"#00BCD4"):el.color;if(HAS_HTML(l)){const tokens=parseInline(l);drawTokens(ctx,{...el,color:baseColor,fontWeight:h?"700":el.fontWeight},tokens,el.x,el.y+i*(el.fontSize+6));}else{ctx.fillStyle=baseColor;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));}});ctx.restore();return;}
     if(el.pillStyle){const tw=ctx.measureText(el.text).width,ph=el.fontSize+16,pw=tw+40,rx=el.textAlign==="center"?el.x-pw/2:el.x;ctx.fillStyle=el.bgColor||"#1a1a2e";ctx.beginPath();const r=6;ctx.moveTo(rx+r,el.y-ph/2);ctx.lineTo(rx+pw-r,el.y-ph/2);ctx.quadraticCurveTo(rx+pw,el.y-ph/2,rx+pw,el.y-ph/2+r);ctx.lineTo(rx+pw,el.y+ph/2-r);ctx.quadraticCurveTo(rx+pw,el.y+ph/2,rx+pw-r,el.y+ph/2);ctx.lineTo(rx+r,el.y+ph/2);ctx.quadraticCurveTo(rx,el.y+ph/2,rx,el.y+ph/2-r);ctx.lineTo(rx,el.y-ph/2+r);ctx.quadraticCurveTo(rx,el.y-ph/2,rx+r,el.y-ph/2);ctx.closePath();ctx.fill();
       if(el.highlightWord){const parts=el.text.split("–").map(s=>s.trim());if(parts.length===2){const p1=parts[0]+" – ",sx=el.textAlign==="center"?el.x-tw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;ctx.fillText(p1,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(parts[1],sx+ctx.measureText(p1).width,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}ctx.restore();return;}
-    if(el.highlightWord){const idxI=el.text.toUpperCase().indexOf(el.highlightWord.toUpperCase());if(idxI>=0){const before=el.text.substring(0,idxI),hl=el.text.substring(idxI,idxI+el.highlightWord.length),after=el.text.substring(idxI+el.highlightWord.length);const bw=ctx.measureText(before).width,hw=ctx.measureText(hl).width,fw=ctx.measureText(el.text).width,sx=el.textAlign==="center"?el.x-fw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;if(before)ctx.fillText(before,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(hl,sx+bw,el.y);ctx.fillStyle=el.color;if(after)ctx.fillText(after,sx+bw+hw,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}
+    if(HAS_HTML(el.text)){const lines=HTML_PREP(el.text).split("\n");const lineH=el.fontSize+6;const baseY=el.y-(lines.length-1)*lineH/2;lines.forEach((line,i)=>{const tokens=parseInline(line);drawTokens(ctx,el,tokens,el.x,baseY+i*lineH);});}else if(el.highlightWord){const idxI=el.text.toUpperCase().indexOf(el.highlightWord.toUpperCase());if(idxI>=0){const before=el.text.substring(0,idxI),hl=el.text.substring(idxI,idxI+el.highlightWord.length),after=el.text.substring(idxI+el.highlightWord.length);const bw=ctx.measureText(before).width,hw=ctx.measureText(hl).width,fw=ctx.measureText(el.text).width,sx=el.textAlign==="center"?el.x-fw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;if(before)ctx.fillText(before,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(hl,sx+bw,el.y);ctx.fillStyle=el.color;if(after)ctx.fillText(after,sx+bw+hw,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}
     ctx.restore();
   });
   if(car){const w=car.width*cP.scale,h=car.height*cP.scale;ctx.drawImage(car,cP.x-w/2,cP.y-h/2,w,h);}
@@ -166,6 +228,7 @@ export default function App(){
   const [waParsing,setWaParsing]=useState(false);
   const [waError,setWaError]=useState("");
   const [showGuides,setShowGuides]=useState(true);
+  const [customFonts,setCustomFonts]=useState([]);
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("anthropic_api_key")||"");
   const [colorPresets,setColorPresets]=useState(()=>{try{const s=localStorage.getItem("colorPresets");return s?JSON.parse(s):DEFAULT_COLOR_PRESETS;}catch{return DEFAULT_COLOR_PRESETS;}});
   const [newPresetColor,setNewPresetColor]=useState("#00BCD4");
@@ -189,9 +252,12 @@ export default function App(){
   const histRef=useRef([]);const isUndo=useRef(false);
   const snap=useCallback(()=>{if(isUndo.current)return;const s=JSON.stringify({elements,offers:offers.map(o=>({...o,carImg:null,carThumb:o.carThumb})),carPos,logoPos,bgColor,overlayOpacity});const h=histRef.current;if(!h.length||h[h.length-1]!==s){h.push(s);if(h.length>50)h.shift();}},[elements,offers,carPos,logoPos,bgColor,overlayOpacity]);
   const snapT=useRef(null);
-  useEffect(()=>{if(snapT.current)clearTimeout(snapT.current);snapT.current=setTimeout(snap,600);},[snap]);
+  useEffect(()=>{if(snapT.current)clearTimeout(snapT.current);snapT.current=setTimeout(snap,250);},[snap]);
   const undo=useCallback(()=>{const h=histRef.current;if(h.length<2)return;h.pop();const prev=h[h.length-1];if(!prev)return;isUndo.current=true;try{const s=JSON.parse(prev);setElements(s.elements);setOffers(old=>{const m={};old.forEach(o=>{m[o.id]=o.carImg;});return s.offers.map(o=>({...o,carImg:m[o.id]||null}));});setCarPos(s.carPos);setLogoPos(s.logoPos);setBgColor(s.bgColor);setOverlayOpacity(s.overlayOpacity);}catch(e){}setTimeout(()=>{isUndo.current=false;},100);},[]);
-  useEffect(()=>{const h=e=>{if((e.ctrlKey||e.metaKey)&&e.key==="z"){e.preventDefault();undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[undo]);
+  useEffect(()=>{const h=e=>{if((e.ctrlKey||e.metaKey)&&e.key==="z"&&!e.shiftKey){const tag=(e.target&&e.target.tagName)||"";const isField=tag==="INPUT"||tag==="TEXTAREA"||(e.target&&e.target.isContentEditable);if(isField)return;e.preventDefault();undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[undo]);
+  // Snapshot iniziale all'avvio (per poter annullare la prima modifica)
+  useEffect(()=>{const t=setTimeout(()=>{if(histRef.current.length===0)snap();},150);return()=>clearTimeout(t);// eslint-disable-next-line
+  },[]);
 
   useEffect(()=>{const l=document.createElement("link");l.href=`https://fonts.googleapis.com/css2?${FONTS.map(f=>`family=${f.replace(/ /g,"+")}:wght@400;600;700;800;900`).join("&")}&display=swap`;l.rel="stylesheet";document.head.appendChild(l);document.fonts.ready.then(()=>setFontsLoaded(true));},[]);
 
@@ -202,6 +268,21 @@ export default function App(){
   useEffect(()=>{if(isBatch)return;const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d");draw(ctx,elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,null,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY);if(showGuides)drawGuides(ctx);},[elements,bgImage,carImage,logoImage,bgColor,overlayOpacity,carPos,logoPos,fontsLoaded,showGuides,tab,globalExtras,watermarkImg,wmOpacity,wmScale,wmX,wmY]);
 
   const loadImg=async(setter,e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setter(img);};
+  const uploadFont=async(e)=>{
+    const files=Array.from(e.target.files||[]);
+    for(const file of files){
+      try{
+        const name=file.name.replace(/\.[^.]+$/,"").replace(/[^a-zA-Z0-9_\- ]/g,"_");
+        const buf=await file.arrayBuffer();
+        const font=new FontFace(name,buf);
+        await font.load();
+        document.fonts.add(font);
+        setCustomFonts(p=>p.includes(name)?p:[...p,name]);
+      }catch(err){console.error("Font load error:",file.name,err);alert("Impossibile caricare il font "+file.name+": "+err.message);}
+    }
+    e.target.value="";
+  };
+  const removeCustomFont=(name)=>{setCustomFonts(p=>p.filter(n=>n!==name));setElements(p=>p.map(el=>el.fontFamily===name?{...el,fontFamily:"Montserrat"}:el));};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
   const autoFitCar=(img)=>{const s=(GR-GL)/img.width;const cy=GB-(img.height*s)/2;setCarPos({x:(GL+GR)/2,y:cy,scale:s});};
   const buildEls=(o)=>elements.map(el=>{if(el.id==="carName")return{...el,text:o.carName||el.text,highlightWord:o.highlightWord||el.highlightWord};if(el.id==="specs")return{...el,text:o.specs||el.text};if(el.id==="duration")return{...el,text:o.duration||el.text};if(el.id==="deposit")return{...el,text:o.deposit||el.text};if(el.id==="price")return{...el,text:o.price||el.text};return el;});
@@ -537,7 +618,12 @@ export default function App(){
                   <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
                   {sel&&(<div className="card">
                     <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
-                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
+                    <div style={{marginBottom:8,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
+                      <div className="lbl">📝 Carica font personalizzato (.ttf/.otf/.woff)</div>
+                      <input type="file" multiple accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" className="fi" style={{padding:5,fontSize:10}} onChange={uploadFont}/>
+                      {customFonts.length>0&&<div style={{marginTop:5,display:"flex",flexWrap:"wrap",gap:3}}>{customFonts.map(n=>(<span key={n} style={{fontSize:10,padding:"2px 6px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:10,color:"#00BCD4",display:"inline-flex",alignItems:"center",gap:4}}>{n}<span onClick={()=>removeCustomFont(n)} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></span>))}</div>}
+                    </div>
+                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
                     <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
                     <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
                     <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
