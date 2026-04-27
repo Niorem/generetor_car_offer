@@ -387,10 +387,11 @@ export default function App(){
         .acc[open]>summary::after{transform:rotate(180deg)}
         .acc>summary:hover{background:#14141f;color:#fff}
         .acc-body{padding:10px 12px;border-top:1px solid #1e1e30}
-        .offer-row{display:flex;gap:12px;background:#0d0d16;border:1px solid #1a1a28;border-radius:10px;padding:12px;margin-bottom:10px;transition:border .2s}
+        .offer-row{display:flex;gap:18px;background:#0d0d16;border:1px solid #1a1a28;border-radius:10px;padding:14px;margin-bottom:12px;transition:border .2s;align-items:flex-start}
         .offer-row:hover{border-color:#252545}
-        .offer-preview{width:300px;flex:0 0 300px;min-width:0}
-        .offer-form{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+        .offer-preview{flex:0 0 33vw;min-width:320px;max-width:720px}
+        .offer-form{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+        @media (max-width:900px){.offer-row{flex-direction:column}.offer-preview{flex:1 1 100%;width:100%;max-width:100%}}
         .offer-form .ofi{margin-bottom:1px}
         .offer-form .ofi label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:1px}
         .offer-form .ofi input,.offer-form .ofi textarea{background:#0a0a14;border:1px solid #1e1e30;color:#ddd;padding:5px 8px;border-radius:5px;font-size:11px;width:100%;outline:none;font-weight:600}.offer-form .ofi input:focus,.offer-form .ofi textarea:focus{border-color:#00BCD4}
@@ -604,10 +605,4 @@ export default function App(){
                 </button>
               ))}
             </div>
-            <button onClick={()=>setDlModal(null)} style={{marginTop:16,width:"100%",padding:"10px",background:"transparent",border:"1px solid #252538",borderRadius:8,color:"#666",cursor:"pointer",fontSize:12,fontWeight:600}}>Annulla</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            <button onClick={()=>setDlModal(null)} style={{marginTop:16,width:"100%",padding:"10px",background:"transparent",border:"1px solid #25253
