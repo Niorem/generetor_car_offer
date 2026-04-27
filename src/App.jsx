@@ -26,31 +26,74 @@ const makeEls=()=>[
   {id:"services",text:"SERVIZI INCLUSI NEL NOLEGGIO LUNGO TERMINE:\nASSICURAZIONI RCA, F&I, PAI & KASKO\nMANUTENZIONE ORDINARIA & STRAORDINARIA\nASSISTENZA STRADALE 24/7",x:500,y:900,fontSize:16,fontFamily:"Montserrat",fontWeight:"600",color:"#FFFFFF",highlightLines:[1,2,3],highlightColor:"#00BCD4",textAlign:"center",visible:true,...mkShadow()},
 ];
 
-const HAS_HTML = s => /<\s*(b|u|i|color|br|\/[buic])/i.test(s || "");
+const HAS_HTML = s => /<\s*(\/?(?:b|u|i|color|br|span|strong|em|font))\b/i.test(s || "");
 const HTML_PREP = s => (s || "").replace(/<br\s*\/?>/gi, "\n");
 function parseInline(text) {
   const out = []; const stack = []; let buf = ""; let i = 0;
   const cur = () => { const r = { bold: false, italic: false, underline: false, color: null }; stack.forEach(s => { if (s.bold) r.bold = true; if (s.italic) r.italic = true; if (s.underline) r.underline = true; if (s.color) r.color = s.color; }); return r; };
   const flush = () => { if (buf) { out.push({ text: buf, ...cur() }); buf = ""; } };
+  // Parse style="color:#xxx;font-weight:bold;text-decoration:underline;font-style:italic"
+  const parseStyle = styleStr => {
+    const r = {};
+    if (!styleStr) return r;
+    styleStr.split(";").forEach(decl => {
+      const idx = decl.indexOf(":");
+      if (idx < 0) return;
+      const k = decl.substring(0, idx).trim().toLowerCase();
+      const v = decl.substring(idx + 1).trim();
+      if (k === "color") r.color = v;
+      if (k === "font-weight" && /^(bold|[6-9]00)$/i.test(v)) r.bold = true;
+      if (k === "text-decoration" && /underline/i.test(v)) r.underline = true;
+      if (k === "font-style" && /italic/i.test(v)) r.italic = true;
+    });
+    return r;
+  };
+  // Parse all attributes from a tag body like: span style="color:red" id="x"
+  const parseAttrs = body => {
+    const attrs = {};
+    const re = /(\w[\w-]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g;
+    let m;
+    while ((m = re.exec(body))) {
+      attrs[m[1].toLowerCase()] = m[3] !== undefined ? m[3] : (m[4] !== undefined ? m[4] : m[5]);
+    }
+    return attrs;
+  };
   while (i < text.length) {
     if (text[i] === "<") {
       const end = text.indexOf(">", i);
       if (end > i) {
-        const body = text.substring(i + 1, end);
+        const body = text.substring(i + 1, end).trim();
         const close = body.startsWith("/");
-        const inner = close ? body.slice(1) : body;
-        const m = inner.match(/^(\w+)(?:\s*=\s*"?([^"]+?)"?)?$/);
-        if (m) {
-          const name = m[1].toLowerCase(); const val = m[2];
-          if (["b", "i", "u", "color"].includes(name)) {
+        const inner = close ? body.slice(1).trim() : body;
+        // Tag name = first word
+        const nameMatch = inner.match(/^(\w+)/);
+        if (nameMatch) {
+          const name = nameMatch[1].toLowerCase();
+          if (["b", "i", "u", "color", "span", "strong", "em", "font"].includes(name)) {
             flush();
-            if (close) { for (let j = stack.length - 1; j >= 0; j--) if (stack[j]._n === name) { stack.splice(j, 1); break; } }
-            else {
+            if (close) {
+              for (let j = stack.length - 1; j >= 0; j--) if (stack[j]._n === name) { stack.splice(j, 1); break; }
+            } else {
               const it = { _n: name };
-              if (name === "b") it.bold = true;
-              if (name === "i") it.italic = true;
+              if (name === "b" || name === "strong") it.bold = true;
+              if (name === "i" || name === "em") it.italic = true;
               if (name === "u") it.underline = true;
-              if (name === "color" && val) it.color = val;
+              const attrBody = inner.substring(nameMatch[1].length).trim();
+              if (name === "color") {
+                // <color="#xxx"> or <color=#xxx>
+                const m2 = attrBody.match(/^=\s*"?([^"\s>]+)"?/);
+                if (m2) it.color = m2[1];
+              } else if (attrBody) {
+                const attrs = parseAttrs(attrBody);
+                if (attrs.color) it.color = attrs.color;
+                if (attrs.style) {
+                  const st = parseStyle(attrs.style);
+                  if (st.color) it.color = st.color;
+                  if (st.bold) it.bold = true;
+                  if (st.underline) it.underline = true;
+                  if (st.italic) it.italic = true;
+                }
+              }
               stack.push(it);
             }
             i = end + 1; continue;
