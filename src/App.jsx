@@ -4,7 +4,7 @@ const FONTS=["Montserrat","Oswald","Bebas Neue","Poppins","Raleway","Roboto Cond
 const CW=1000,CH=1000;
 const NORM=s=>(s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
 const HTML_ENT={amp:"&",lt:"<",gt:">",quot:'"',apos:"'",nbsp:" ",euro:"€",pound:"£",yen:"¥",cent:"¢",deg:"°",copy:"©",reg:"®",trade:"™",bull:"•",middot:"·",ndash:"–",mdash:"—",hellip:"…",laquo:"«",raquo:"»",times:"×",divide:"÷",plusmn:"±",sup2:"²",sup3:"³",frac12:"½",frac14:"¼",frac34:"¾",larr:"←",rarr:"→",uarr:"↑",darr:"↓"};
-const decodeHtml=s=>(s||"").toString().replace(/&(#?\w+);/g,(m,e)=>{if(e[0]==="#"){const n=e[1]==="x"||e[1]==="X"?parseInt(e.slice(2),16):parseInt(e.slice(1),10);return isNaN(n)?m:String.fromCodePoint(n);}return HTML_ENT[e.toLowerCase()]||m;});
+const decodeHtml=s=>(s||"").toString().replace(/<br\s*\/?>/gi,"\n").replace(/&(#?\w+);/g,(m,e)=>{if(e[0]==="#"){const n=e[1]==="x"||e[1]==="X"?parseInt(e.slice(2),16):parseInt(e.slice(1),10);return isNaN(n)?m:String.fromCodePoint(n);}return HTML_ENT[e.toLowerCase()]||m;});
 let _oid=0;
 const newOffer=()=>({id:++_oid,carName:"",highlightWord:"",specs:"",duration:"",deposit:"",price:"",carImg:null,carThumb:null,carX:500,carY:620,carScale:0.85,_waText:"",_parsing:false,_waError:""});
 
@@ -433,8 +433,8 @@ export default function App(){
                 <div className="row"><button className="btn bg" disabled={waParsing||!waText.trim()} onClick={handleWa} style={{padding:"8px 18px",fontSize:12,opacity:!waText.trim()?.4:1}}>{waParsing?"⏳ Analizzo...":"🤖 Compila con AI"}</button>{waError&&<span style={{fontSize:11,color:"#ef5350"}}>{waError}</span>}</div>
               </div>
               <div style={{fontSize:13,fontWeight:800,color:"#00BCD4",marginBottom:12}}>Dati Offerta</div>
-              {qf.map((q,i)=>{const el=getEl(q.id),val=q.key?el[q.key]||"":el.text;return(<div className="qf" key={i}><div className="ql">{q.label}</div><textarea value={val} placeholder={q.ph} rows={1} onChange={e=>{if(q.key)setEl(q.id,q.key,e.target.value);else setEl(q.id,"text",e.target.value);}} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:20,fontFamily:"inherit",lineHeight:1.35}}/></div>);})}
-              <div className="qf"><div className="ql">📋 Servizi</div><textarea className="inp" rows={3} value={getEl("services").text} onChange={e=>setEl("services","text",e.target.value)} style={{background:"transparent",border:"none",fontSize:11,padding:0}}/></div>
+              {qf.map((q,i)=>{const el=getEl(q.id),val=q.key?el[q.key]||"":el.text;return(<div className="qf" key={i}><div className="ql">{q.label}</div><textarea value={val} placeholder={q.ph} rows={1} onChange={e=>{const v=decodeHtml(e.target.value);if(q.key)setEl(q.id,q.key,v);else setEl(q.id,"text",v);}} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:20,fontFamily:"inherit",lineHeight:1.35}}/></div>);})}
+              <div className="qf"><div className="ql">📋 Servizi</div><textarea className="inp" rows={3} value={getEl("services").text} onChange={e=>setEl("services","text",decodeHtml(e.target.value))} style={{background:"transparent",border:"none",fontSize:11,padding:0}}/></div>
             </div>)}
             {tab==="setup"&&(<div>
               {/* === SEZIONE 1 — IMMAGINI & POSIZIONI === */}
@@ -534,7 +534,7 @@ export default function App(){
                   {/* Fields */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[{k:"carName",l:"Nome Auto",ph:"MERCEDES GLC COUPÉ"},{k:"highlightWord",l:"Evidenziata",ph:"GLC COUPÉ"},{k:"specs",l:"Caratteristiche",ph:"220D MHEV..."},{k:"duration",l:"Durata / KM",ph:"48 MESI – 60.000 KM"},{k:"deposit",l:"Anticipo",ph:"ANTICIPO 2.000€"},{k:"price",l:"Canone €",ph:"689"}].map(f=>(
-                      <div className="ofi" key={f.k}><label>{f.l}</label><textarea value={o[f.k]||""} placeholder={f.ph} rows={1} onChange={e=>updOffer(o.id,f.k,e.target.value)} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:24,fontFamily:"inherit",lineHeight:1.3}}/></div>
+                      <div className="ofi" key={f.k}><label>{f.l}</label><textarea value={o[f.k]||""} placeholder={f.ph} rows={1} onChange={e=>updOffer(o.id,f.k,decodeHtml(e.target.value))} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:24,fontFamily:"inherit",lineHeight:1.3}}/></div>
                     ))}
                   </div>
 
