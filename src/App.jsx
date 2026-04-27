@@ -1,6 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const FONTS=["Montserrat","Oswald","Bebas Neue","Poppins","Raleway","Roboto Condensed","Anton","Barlow Condensed","Teko","Russo One"];
+const FONT_DB = {
+  "Montserrat": [100,200,300,400,500,600,700,800,900],
+  "Oswald": [200,300,400,500,600,700],
+  "Bebas Neue": [400],
+  "Poppins": [100,200,300,400,500,600,700,800,900],
+  "Raleway": [100,200,300,400,500,600,700,800,900],
+  "Roboto Condensed": [100,200,300,400,500,600,700,800,900],
+  "Anton": [400],
+  "Barlow Condensed": [100,200,300,400,500,600,700,800,900],
+  "Teko": [300,400,500,600,700],
+  "Russo One": [400],
+};
+const FONTS = Object.keys(FONT_DB);
+const pickWeight = (family, requested) => {
+  const weights = FONT_DB[family];
+  if (!weights) return String(requested || 400);
+  const req = parseInt(requested) || 400;
+  return String(weights.reduce((best, w) => Math.abs(w - req) < Math.abs(best - req) ? w : best, weights[0]));
+};
 const DEFAULT_COLOR_PRESETS=[
   {id:"cyan",label:"Cyan",accentColor:"#00BCD4"},
   {id:"rosso",label:"Rosso",accentColor:"#FF5252"},
@@ -107,7 +125,7 @@ function parseInline(text) {
   return out;
 }
 function drawTokens(ctx, el, tokens, x, y) {
-  const fontFor = t => `${t.italic ? "italic " : ""}${t.bold ? "900" : el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
+  const fontFor = t => `${t.italic ? "italic " : ""}${pickWeight(el.fontFamily, t.bold ? "900" : el.fontWeight)} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
   let totalW = 0;
   tokens.forEach(t => { ctx.font = fontFor(t); totalW += ctx.measureText(t.text).width; });
   let sx = x;
@@ -137,9 +155,9 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
   if(logo){const w=logo.width*lP.scale,h=logo.height*lP.scale;ctx.drawImage(logo,lP.x-w/2,lP.y-h/2,w,h);}
   els.forEach(el=>{
     if(!el.visible)return;ctx.save();
-    ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.textAlign=el.textAlign||"center";ctx.textBaseline="middle";
+    ctx.font=`${pickWeight(el.fontFamily,el.fontWeight)} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.textAlign=el.textAlign||"center";ctx.textBaseline="middle";
     if(el.shadowEnabled){ctx.shadowColor=el.shadowColor||"rgba(0,0,0,0.8)";ctx.shadowBlur=el.shadowBlur||0;ctx.shadowOffsetX=el.shadowOffsetX||0;ctx.shadowOffsetY=el.shadowOffsetY||0;}else{ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;}
-    if(el.id==="services"){HTML_PREP(el.text).split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${h?"700":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const baseColor=h?(el.highlightColor||"#00BCD4"):el.color;if(HAS_HTML(l)){const tokens=parseInline(l);drawTokens(ctx,{...el,color:baseColor,fontWeight:h?"700":el.fontWeight},tokens,el.x,el.y+i*(el.fontSize+6));}else{ctx.fillStyle=baseColor;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));}});ctx.restore();return;}
+    if(el.id==="services"){HTML_PREP(el.text).split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${pickWeight(el.fontFamily,h?"700":el.fontWeight)} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const baseColor=h?(el.highlightColor||"#00BCD4"):el.color;if(HAS_HTML(l)){const tokens=parseInline(l);drawTokens(ctx,{...el,color:baseColor,fontWeight:h?"700":el.fontWeight},tokens,el.x,el.y+i*(el.fontSize+6));}else{ctx.fillStyle=baseColor;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));}});ctx.restore();return;}
     if(el.pillStyle){
       const _hasHtml=HAS_HTML(el.text);
       let tw;
@@ -147,7 +165,7 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
       if(_hasHtml){
         _tokens=parseInline(HTML_PREP(el.text));
         tw=0;
-        const fontFor=t=>`${t.italic?"italic ":""}${t.bold?"900":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
+        const fontFor=t=>`${t.italic?"italic ":""}${pickWeight(el.fontFamily,t.bold?"900":el.fontWeight)} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
         _tokens.forEach(t=>{ctx.font=fontFor(t);tw+=ctx.measureText(t.text).width;});
       } else {
         tw=ctx.measureText(el.text).width;
@@ -320,7 +338,7 @@ export default function App(){
   useEffect(()=>{const t=setTimeout(()=>{if(histRef.current.length===0)snap();},150);return()=>clearTimeout(t);// eslint-disable-next-line
   },[]);
 
-  useEffect(()=>{const l=document.createElement("link");l.href=`https://fonts.googleapis.com/css2?${FONTS.map(f=>`family=${f.replace(/ /g,"+")}:wght@400;600;700;800;900`).join("&")}&display=swap`;l.rel="stylesheet";document.head.appendChild(l);document.fonts.ready.then(()=>setFontsLoaded(true));},[]);
+  useEffect(()=>{const l=document.createElement("link");l.href="https://fonts.googleapis.com/css2?"+Object.entries(FONT_DB).map(([n,ws])=>`family=${n.replace(/ /g,"+")}:wght@${ws.join(";")}`).join("&")+"&display=swap";l.rel="stylesheet";document.head.appendChild(l);document.fonts.ready.then(()=>setFontsLoaded(true));},[]);
 
   const getEl=id=>elements.find(e=>e.id===id);
   const setEl=(id,k,v)=>setElements(p=>p.map(e=>e.id===id?{...e,[k]:v}:e));
@@ -351,7 +369,7 @@ export default function App(){
 
   // Canvas drag (single mode)
   const coords=e=>{const c=canvasRef.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};};
-  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}if(watermarkImg){const ww=watermarkImg.width*wmScale,wh=watermarkImg.height*wmScale;if(p.x>wmX-ww/2&&p.x<wmX+ww/2&&p.y>wmY-wh/2&&p.y<wmY+wh/2){setDragging("watermark");setDragStart({x:p.x-wmX,y:p.y-wmY});return;}}for(let i=globalExtras.length-1;i>=0;i--){const ex=globalExtras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDragging("gex_"+i);setDragStart({x:p.x-ex.x,y:p.y-ex.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
+  const onDown=e=>{const p=coords(e);if(logoImage){const w=logoImage.width*logoPos.scale,h=logoImage.height*logoPos.scale;if(p.x>logoPos.x-w/2&&p.x<logoPos.x+w/2&&p.y>logoPos.y-h/2&&p.y<logoPos.y+h/2){setDragging("logo");setDragStart({x:p.x-logoPos.x,y:p.y-logoPos.y});return;}}if(carImage){const w=carImage.width*carPos.scale,h=carImage.height*carPos.scale;if(p.x>carPos.x-w/2&&p.x<carPos.x+w/2&&p.y>carPos.y-h/2&&p.y<carPos.y+h/2){setDragging("car");setDragStart({x:p.x-carPos.x,y:p.y-carPos.y});return;}}if(watermarkImg){const ww=watermarkImg.width*wmScale,wh=watermarkImg.height*wmScale;if(p.x>wmX-ww/2&&p.x<wmX+ww/2&&p.y>wmY-wh/2&&p.y<wmY+wh/2){setDragging("watermark");setDragStart({x:p.x-wmX,y:p.y-wmY});return;}}for(let i=globalExtras.length-1;i>=0;i--){const ex=globalExtras[i];if(!ex.img)continue;const w=ex.img.width*ex.scale,h=ex.img.height*ex.scale;if(p.x>ex.x-w/2&&p.x<ex.x+w/2&&p.y>ex.y-h/2&&p.y<ex.y+h/2){setDragging("gex_"+i);setDragStart({x:p.x-ex.x,y:p.y-ex.y});return;}}for(const el of[...elements].reverse()){if(!el.visible)continue;const ctx=canvasRef.current.getContext("2d");ctx.font=`${pickWeight(el.fontFamily,el.fontWeight)} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const lines=el.text.split("\n"),mw=Math.max(...lines.map(l=>ctx.measureText(l).width)),th=lines.length*(el.fontSize+6);let ex=el.x;if(el.textAlign==="center")ex=el.x-mw/2;else if(el.textAlign==="right")ex=el.x-mw;if(p.x>ex-10&&p.x<ex+mw+10&&p.y>el.y-th/2-10&&p.y<el.y+th/2+10){setDragging(el.id);setDragStart({x:p.x-el.x,y:p.y-el.y});setSelectedEl(el.id);setTab("stile");return;}}};
   const onMove=e=>{if(!dragging)return;const pt=coords(e);if(dragging==="logo")setLogoPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="car")setCarPos(v=>({...v,x:pt.x-dragStart.x,y:pt.y-dragStart.y}));else if(dragging==="watermark"){setWmX(Math.round(pt.x-dragStart.x));setWmY(Math.round(pt.y-dragStart.y));}else if(dragging.startsWith("gex_")){const i=+dragging.split("_")[1];setGlobalExtras(prev=>prev.map((ex,idx)=>idx===i?{...ex,x:Math.round(pt.x-dragStart.x),y:Math.round(pt.y-dragStart.y)}:ex));}else{setEl(dragging,"x",Math.round(pt.x-dragStart.x));setEl(dragging,"y",Math.round(pt.y-dragStart.y));}};
   const onUp=()=>{setDragging(null);setDragStart(null);};
 
@@ -677,6 +695,14 @@ export default function App(){
                   <span style={{color:"#555",fontSize:14}}>{accElementi?"▾":"▸"}</span>
                 </div>
                 {accElementi&&(<div>
+                  <div style={{marginBottom:10,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
+                    <div className="lbl">⚡ Applica font a TUTTI gli elementi</div>
+                    <select className="inp" defaultValue="" onChange={e=>{const f=e.target.value;if(!f)return;setElements(p=>p.map(el=>({...el,fontFamily:f})));e.target.value="";}}>
+                      <option value="">— Scegli font —</option>
+                      {FONTS.map(f=><option key={f}>{f}</option>)}
+                      {customFonts.length>0&&<optgroup label="Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}
+                    </select>
+                  </div>
                   <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
                   {sel&&(<div className="card">
                     <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
