@@ -307,6 +307,7 @@ export default function App(){
   const [waError,setWaError]=useState("");
   const [showGuides,setShowGuides]=useState(true);
   const [customFonts,setCustomFonts]=useState([]);
+  const customFontsLoadedRef=useRef(false);
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("anthropic_api_key")||"");
   const [colorPresets,setColorPresets]=useState(()=>{try{const s=localStorage.getItem("colorPresets");return s?JSON.parse(s):DEFAULT_COLOR_PRESETS;}catch{return DEFAULT_COLOR_PRESETS;}});
   const [newPresetColor,setNewPresetColor]=useState("#00BCD4");
@@ -378,6 +379,80 @@ export default function App(){
     }catch(err){alert("Impossibile rinominare il font: "+err.message);}
   };
   const applyFontToAll=(family)=>{if(!family)return;setElements(p=>p.map(el=>({...el,fontFamily:family})));};
+  // ===== Persistenza custom font (localStorage + export/import) =====
+  const _bufToB64=buf=>{let s="";const arr=new Uint8Array(buf);for(let i=0;i<arr.length;i++)s+=String.fromCharCode(arr[i]);return btoa(s);};
+  const _b64ToBuf=b64=>{const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr.buffer;};
+  // Load saved fonts on first mount
+  useEffect(()=>{
+    if(customFontsLoadedRef.current)return;
+    customFontsLoadedRef.current=true;
+    try{
+      const raw=localStorage.getItem("customFonts");
+      if(!raw)return;
+      const arr=JSON.parse(raw);
+      (async()=>{
+        for(const it of arr){
+          try{
+            const buf=_b64ToBuf(it.base64);
+            const face=new FontFace(it.name,buf);
+            await face.load();
+            document.fonts.add(face);
+            setCustomFonts(p=>p.find(x=>x.name===it.name)?p:[...p,{name:it.name,face,buffer:buf}]);
+          }catch(err){console.warn("Font ricaricato non valido:",it.name,err);}
+        }
+      })();
+    }catch(err){console.warn("Errore lettura localStorage customFonts:",err);}
+  },[]);
+  // Auto-save when customFonts changes (skip first render)
+  const _firstSaveSkipRef=useRef(true);
+  useEffect(()=>{
+    if(_firstSaveSkipRef.current){_firstSaveSkipRef.current=false;return;}
+    try{
+      const data=customFonts.map(({name,buffer})=>({name,base64:buffer?_bufToB64(buffer):""})).filter(x=>x.base64);
+      localStorage.setItem("customFonts",JSON.stringify(data));
+    }catch(err){
+      if(err&&err.name==="QuotaExceededError"){alert("Spazio storage esaurito. Esporta i font in un file JSON e/o rimuovi quelli inutilizzati.");}
+      else{console.warn("Salvataggio font fallito:",err);}
+    }
+  },[customFonts]);
+  // Export all custom fonts to JSON file
+  const exportFonts=()=>{
+    if(customFonts.length===0){alert("Nessun font personalizzato da esportare.");return;}
+    const data=customFonts.map(({name,buffer})=>({name,base64:buffer?_bufToB64(buffer):""})).filter(x=>x.base64);
+    const blob=new Blob([JSON.stringify({version:1,fonts:data},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    const ts=new Date().toISOString().slice(0,10);
+    a.href=url;a.download=`car-offer-fonts_${ts}.json`;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+  };
+  // Import fonts from JSON file
+  const importFonts=async(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    try{
+      const text=await file.text();
+      const obj=JSON.parse(text);
+      const arr=obj.fonts||obj;
+      if(!Array.isArray(arr))throw new Error("Formato non valido");
+      let added=0,skipped=0;
+      for(const it of arr){
+        if(!it.name||!it.base64){skipped++;continue;}
+        if(customFonts.find(x=>x.name===it.name)){skipped++;continue;}
+        try{
+          const buf=_b64ToBuf(it.base64);
+          const face=new FontFace(it.name,buf);
+          await face.load();
+          document.fonts.add(face);
+          setCustomFonts(p=>p.find(x=>x.name===it.name)?p:[...p,{name:it.name,face,buffer:buf}]);
+          added++;
+        }catch(err){skipped++;console.warn("Errore import font",it.name,err);}
+      }
+      alert(`Import completato: ${added} font aggiunti, ${skipped} saltati (gia presenti o invalidi).`);
+    }catch(err){alert("File non valido: "+err.message);}
+    e.target.value="";
+  };
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
   const autoFitCar=(img)=>{const s=(GR-GL)/img.width;const cy=GB-(img.height*s)/2;setCarPos({x:(GL+GR)/2,y:cy,scale:s});};
   const buildEls=(o)=>elements.map(el=>{if(el.id==="carName"){const cn=!!o.carName;return{...el,text:o.carName||el.text,highlightWord:o.highlightWord||(cn?"":el.highlightWord)};}if(el.id==="specs")return{...el,text:o.specs||el.text};if(el.id==="duration")return{...el,text:o.duration||el.text};if(el.id==="deposit")return{...el,text:o.deposit||el.text};if(el.id==="price")return{...el,text:o.price||el.text};return el;});
@@ -725,6 +800,12 @@ export default function App(){
                     <div style={{marginBottom:8,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
                       <div className="lbl">📝 Carica font personalizzato (.ttf/.otf/.woff)</div>
                       <input type="file" multiple accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" className="fi" style={{padding:5,fontSize:10}} onChange={uploadFont}/>
+                      <div style={{marginTop:6,display:"flex",gap:5}}>
+                        <button onClick={exportFonts} className="btn bs" style={{flex:1,padding:"4px 6px",fontSize:10}} title="Scarica un file JSON con tutti i font personalizzati">⬇ Esporta</button>
+                        <label className="btn bs" style={{flex:1,padding:"4px 6px",fontSize:10,textAlign:"center",cursor:"pointer",margin:0}} title="Carica un file JSON di font esportati">⬆ Importa
+                          <input type="file" accept=".json,application/json" onChange={importFonts} style={{display:"none"}}/>
+                        </label>
+                      </div>
                       {customFonts.length>0&&<div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>{customFonts.map(f=>(<div key={f.name} style={{fontSize:10,padding:"4px 8px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:8,color:"#00BCD4",display:"flex",alignItems:"center",gap:6}}><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span><button onClick={()=>applyFontToAll(f.name)} title="Applica a tutti gli elementi" style={{background:"transparent",border:"1px solid #00BCD4",color:"#00BCD4",borderRadius:4,padding:"1px 6px",fontSize:9,cursor:"pointer",fontWeight:700}}>⚡ Tutti</button><span onClick={()=>{const n=prompt("Nuovo nome per il font:",f.name);if(n)renameCustomFont(f.name,n);}} style={{cursor:"pointer",color:"#FFC107",fontWeight:700}} title="Rinomina">✏️</span><span onClick={()=>{if(window.confirm("Rimuovere il font \""+f.name+"\"?"))removeCustomFont(f.name);}} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></div>))}</div>}
                     </div>
                     <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="📝 Personalizzati">{customFonts.map(f=><option key={f.name}>{f.name}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
