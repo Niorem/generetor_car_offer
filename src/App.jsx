@@ -140,8 +140,25 @@ function draw(ctx,els,bg,car,logo,bgC,ov,cP,lP,extras,globalExtras=[],watermarkI
     ctx.font=`${el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;ctx.textAlign=el.textAlign||"center";ctx.textBaseline="middle";
     if(el.shadowEnabled){ctx.shadowColor=el.shadowColor||"rgba(0,0,0,0.8)";ctx.shadowBlur=el.shadowBlur||0;ctx.shadowOffsetX=el.shadowOffsetX||0;ctx.shadowOffsetY=el.shadowOffsetY||0;}else{ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;}
     if(el.id==="services"){HTML_PREP(el.text).split("\n").forEach((l,i)=>{const h=el.highlightLines?.includes(i);ctx.font=`${h?"700":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;const baseColor=h?(el.highlightColor||"#00BCD4"):el.color;if(HAS_HTML(l)){const tokens=parseInline(l);drawTokens(ctx,{...el,color:baseColor,fontWeight:h?"700":el.fontWeight},tokens,el.x,el.y+i*(el.fontSize+6));}else{ctx.fillStyle=baseColor;ctx.fillText(l,el.x,el.y+i*(el.fontSize+6));}});ctx.restore();return;}
-    if(el.pillStyle){const tw=ctx.measureText(el.text).width,ph=el.fontSize+16,pw=tw+40,rx=el.textAlign==="center"?el.x-pw/2:el.x;ctx.fillStyle=el.bgColor||"#1a1a2e";ctx.beginPath();const r=6;ctx.moveTo(rx+r,el.y-ph/2);ctx.lineTo(rx+pw-r,el.y-ph/2);ctx.quadraticCurveTo(rx+pw,el.y-ph/2,rx+pw,el.y-ph/2+r);ctx.lineTo(rx+pw,el.y+ph/2-r);ctx.quadraticCurveTo(rx+pw,el.y+ph/2,rx+pw-r,el.y+ph/2);ctx.lineTo(rx+r,el.y+ph/2);ctx.quadraticCurveTo(rx,el.y+ph/2,rx,el.y+ph/2-r);ctx.lineTo(rx,el.y-ph/2+r);ctx.quadraticCurveTo(rx,el.y-ph/2,rx+r,el.y-ph/2);ctx.closePath();ctx.fill();
-      if(el.highlightWord){const parts=el.text.split("–").map(s=>s.trim());if(parts.length===2){const p1=parts[0]+" – ",sx=el.textAlign==="center"?el.x-tw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;ctx.fillText(p1,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(parts[1],sx+ctx.measureText(p1).width,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}ctx.restore();return;}
+    if(el.pillStyle){
+      const _hasHtml=HAS_HTML(el.text);
+      let tw;
+      let _tokens=null;
+      if(_hasHtml){
+        _tokens=parseInline(HTML_PREP(el.text));
+        tw=0;
+        const fontFor=t=>`${t.italic?"italic ":""}${t.bold?"900":el.fontWeight} ${el.fontSize}px "${el.fontFamily}",sans-serif`;
+        _tokens.forEach(t=>{ctx.font=fontFor(t);tw+=ctx.measureText(t.text).width;});
+      } else {
+        tw=ctx.measureText(el.text).width;
+      }
+      const ph=el.fontSize+16,pw=tw+40,rx=el.textAlign==="center"?el.x-pw/2:el.x;
+      ctx.fillStyle=el.bgColor||"#1a1a2e";ctx.beginPath();const r=6;ctx.moveTo(rx+r,el.y-ph/2);ctx.lineTo(rx+pw-r,el.y-ph/2);ctx.quadraticCurveTo(rx+pw,el.y-ph/2,rx+pw,el.y-ph/2+r);ctx.lineTo(rx+pw,el.y+ph/2-r);ctx.quadraticCurveTo(rx+pw,el.y+ph/2,rx+pw-r,el.y+ph/2);ctx.lineTo(rx+r,el.y+ph/2);ctx.quadraticCurveTo(rx,el.y+ph/2,rx,el.y+ph/2-r);ctx.lineTo(rx,el.y-ph/2+r);ctx.quadraticCurveTo(rx,el.y-ph/2,rx+r,el.y-ph/2);ctx.closePath();ctx.fill();
+      if(_hasHtml){
+        drawTokens(ctx,el,_tokens,el.x,el.y);
+      } else if(el.highlightWord){const parts=el.text.split("–").map(s=>s.trim());if(parts.length===2){const p1=parts[0]+" – ",sx=el.textAlign==="center"?el.x-tw/2:el.x;ctx.textAlign="left";ctx.fillStyle=el.color;ctx.fillText(p1,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(parts[1],sx+ctx.measureText(p1).width,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}
+      ctx.restore();return;
+    }
     if(HAS_HTML(el.text)){const lines=HTML_PREP(el.text).split("\n");const lineH=el.fontSize+6;const baseY=el.y-(lines.length-1)*lineH/2;lines.forEach((line,i)=>{const tokens=parseInline(line);drawTokens(ctx,el,tokens,el.x,baseY+i*lineH);});}else if(el.highlightWord){const _hw=(el.highlightWord||"").trim();const _norm=s=>(s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();const idxI=_hw?_norm(el.text).indexOf(_norm(_hw)):-1;let before,hl,after;if(idxI>=0){before=el.text.substring(0,idxI);hl=el.text.substring(idxI,idxI+_hw.length);after=el.text.substring(idxI+_hw.length);}else if(_hw){before=el.text+(el.text?" ":"");hl=_hw;after="";}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);ctx.restore();return;}const bw=ctx.measureText(before).width,hw=ctx.measureText(hl).width,aw=ctx.measureText(after).width;const fw=bw+hw+aw;const sx=el.textAlign==="center"?el.x-fw/2:(el.textAlign==="right"?el.x-fw:el.x);ctx.textAlign="left";ctx.fillStyle=el.color;if(before)ctx.fillText(before,sx,el.y);ctx.fillStyle=el.highlightColor||"#00BCD4";ctx.fillText(hl,sx+bw,el.y);ctx.fillStyle=el.color;if(after)ctx.fillText(after,sx+bw+hw,el.y);}else{ctx.fillStyle=el.color;ctx.fillText(el.text,el.x,el.y);}
     ctx.restore();
   });
@@ -292,12 +309,13 @@ export default function App(){
   useEffect(()=>{localStorage.setItem("colorPresets",JSON.stringify(colorPresets));},[colorPresets]);
 
   // UNDO
-  const histRef=useRef([]);const isUndo=useRef(false);
-  const snap=useCallback(()=>{if(isUndo.current)return;const s=JSON.stringify({elements,offers:offers.map(o=>({...o,carImg:null,carThumb:o.carThumb})),carPos,logoPos,bgColor,overlayOpacity});const h=histRef.current;if(!h.length||h[h.length-1]!==s){h.push(s);if(h.length>50)h.shift();}},[elements,offers,carPos,logoPos,bgColor,overlayOpacity]);
+  const histRef=useRef([]);const redoRef=useRef([]);const isUndo=useRef(false);
+  const snap=useCallback(()=>{if(isUndo.current)return;const s=JSON.stringify({elements,offers:offers.map(o=>({...o,carImg:null,carThumb:o.carThumb})),carPos,logoPos,bgColor,overlayOpacity});const h=histRef.current;if(!h.length||h[h.length-1]!==s){h.push(s);if(h.length>100)h.shift();redoRef.current=[];}},[elements,offers,carPos,logoPos,bgColor,overlayOpacity]);
   const snapT=useRef(null);
   useEffect(()=>{if(snapT.current)clearTimeout(snapT.current);snapT.current=setTimeout(snap,250);},[snap]);
-  const undo=useCallback(()=>{const h=histRef.current;if(h.length<2)return;h.pop();const prev=h[h.length-1];if(!prev)return;isUndo.current=true;try{const s=JSON.parse(prev);setElements(s.elements);setOffers(old=>{const m={};old.forEach(o=>{m[o.id]=o.carImg;});return s.offers.map(o=>({...o,carImg:m[o.id]||null}));});setCarPos(s.carPos);setLogoPos(s.logoPos);setBgColor(s.bgColor);setOverlayOpacity(s.overlayOpacity);}catch(e){}setTimeout(()=>{isUndo.current=false;},100);},[]);
-  useEffect(()=>{const h=e=>{if((e.ctrlKey||e.metaKey)&&e.key==="z"&&!e.shiftKey){const tag=(e.target&&e.target.tagName)||"";const isField=tag==="INPUT"||tag==="TEXTAREA"||(e.target&&e.target.isContentEditable);if(isField)return;e.preventDefault();undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[undo]);
+  const undo=useCallback(()=>{const h=histRef.current;if(h.length<2)return;const popped=h.pop();redoRef.current.push(popped);if(redoRef.current.length>100)redoRef.current.shift();const prev=h[h.length-1];if(!prev)return;isUndo.current=true;try{const s=JSON.parse(prev);setElements(s.elements);setOffers(old=>{const m={};old.forEach(o=>{m[o.id]=o.carImg;});return s.offers.map(o=>({...o,carImg:m[o.id]||null}));});setCarPos(s.carPos);setLogoPos(s.logoPos);setBgColor(s.bgColor);setOverlayOpacity(s.overlayOpacity);}catch(e){}setTimeout(()=>{isUndo.current=false;},100);},[]);
+  const redo=useCallback(()=>{const r=redoRef.current;if(!r.length)return;const next=r.pop();if(!next)return;histRef.current.push(next);isUndo.current=true;try{const s=JSON.parse(next);setElements(s.elements);setOffers(old=>{const m={};old.forEach(o=>{m[o.id]=o.carImg;});return s.offers.map(o=>({...o,carImg:m[o.id]||null}));});setCarPos(s.carPos);setLogoPos(s.logoPos);setBgColor(s.bgColor);setOverlayOpacity(s.overlayOpacity);}catch(e){}setTimeout(()=>{isUndo.current=false;},100);},[]);
+  useEffect(()=>{const h=e=>{const tag=(e.target&&e.target.tagName)||"";const isField=tag==="INPUT"||tag==="TEXTAREA"||(e.target&&e.target.isContentEditable);const cmd=e.ctrlKey||e.metaKey;if(cmd&&e.key==="z"&&!e.shiftKey){if(isField)return;e.preventDefault();undo();return;}if(cmd&&(e.key==="y"||(e.key==="z"&&e.shiftKey))){if(isField)return;e.preventDefault();redo();return;}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[undo,redo]);
   // Snapshot iniziale all'avvio (per poter annullare la prima modifica)
   useEffect(()=>{const t=setTimeout(()=>{if(histRef.current.length===0)snap();},150);return()=>clearTimeout(t);// eslint-disable-next-line
   },[]);
@@ -516,7 +534,8 @@ export default function App(){
           <span style={{fontWeight:700,fontSize:15}}>Offer Creator</span>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button className="btn bs" style={{fontSize:11,padding:"7px 12px"}} onClick={undo} title="Ctrl+Z">↩ Annulla</button>
+          <button className="btn bs" style={{fontSize:11,padding:"7px 12px"}} onClick={undo} title="Ctrl+Z (annulla)">↩ Annulla</button>
+          <button className="btn bs" style={{fontSize:11,padding:"7px 12px"}} onClick={redo} title="Ctrl+Y o Ctrl+Shift+Z (ripeti)">↪ Ripeti</button>
           <button className={`btn ${showGuides?"bp":"bs"}`} style={{fontSize:11,padding:"7px 12px"}} onClick={()=>setShowGuides(!showGuides)}>📐{showGuides?" ON":" OFF"}</button>
           {!isBatch&&<button className="btn bp" onClick={()=>setDlModal({type:"single"})} style={{fontSize:12,padding:"9px 18px"}}>⬇ Scarica</button>}
           {isBatch&&offers.length>0&&!dlProgress&&<button className="btn bp" onClick={()=>setDlModal({type:"all"})} style={{fontSize:12,padding:"9px 18px"}}>🚀 Scarica ZIP ({offers.length})</button>}
