@@ -353,15 +353,31 @@ export default function App(){
       try{
         const name=file.name.replace(/\.[^.]+$/,"").replace(/[^a-zA-Z0-9_\- ]/g,"_");
         const buf=await file.arrayBuffer();
-        const font=new FontFace(name,buf);
-        await font.load();
-        document.fonts.add(font);
-        setCustomFonts(p=>p.includes(name)?p:[...p,name]);
+        const face=new FontFace(name,buf);
+        await face.load();
+        document.fonts.add(face);
+        setCustomFonts(p=>p.find(x=>x.name===name)?p:[...p,{name,face,buffer:buf}]);
       }catch(err){console.error("Font load error:",file.name,err);alert("Impossibile caricare il font "+file.name+": "+err.message);}
     }
     e.target.value="";
   };
-  const removeCustomFont=(name)=>{setCustomFonts(p=>p.filter(n=>n!==name));setElements(p=>p.map(el=>el.fontFamily===name?{...el,fontFamily:"Montserrat"}:el));};
+  const removeCustomFont=(name)=>{setCustomFonts(p=>{const it=p.find(x=>x.name===name);if(it&&it.face){try{document.fonts.delete(it.face);}catch{}}return p.filter(x=>x.name!==name);});setElements(p=>p.map(el=>el.fontFamily===name?{...el,fontFamily:"Montserrat"}:el));};
+  const renameCustomFont=async(oldName,raw)=>{
+    const newName=(raw||"").trim().replace(/[^a-zA-Z0-9_\- ]/g,"_");
+    if(!newName||newName===oldName)return;
+    if(customFonts.find(f=>f.name===newName)){alert("Esiste gia un font con questo nome: "+newName);return;}
+    const item=customFonts.find(f=>f.name===oldName);
+    if(!item||!item.buffer){alert("Impossibile rinominare: dati font mancanti");return;}
+    try{
+      const newFace=new FontFace(newName,item.buffer);
+      await newFace.load();
+      document.fonts.add(newFace);
+      if(item.face){try{document.fonts.delete(item.face);}catch{}}
+      setCustomFonts(p=>p.map(f=>f.name===oldName?{name:newName,face:newFace,buffer:item.buffer}:f));
+      setElements(p=>p.map(el=>el.fontFamily===oldName?{...el,fontFamily:newName}:el));
+    }catch(err){alert("Impossibile rinominare il font: "+err.message);}
+  };
+  const applyFontToAll=(family)=>{if(!family)return;setElements(p=>p.map(el=>({...el,fontFamily:family})));};
   const loadCarImg=async(e)=>{const f=e.target.files[0];if(!f)return;const{img}=await readFile(f);setCarImage(img);autoFitCar(img);};
   const autoFitCar=(img)=>{const s=(GR-GL)/img.width;const cy=GB-(img.height*s)/2;setCarPos({x:(GL+GR)/2,y:cy,scale:s});};
   const buildEls=(o)=>elements.map(el=>{if(el.id==="carName"){const cn=!!o.carName;return{...el,text:o.carName||el.text,highlightWord:o.highlightWord||(cn?"":el.highlightWord)};}if(el.id==="specs")return{...el,text:o.specs||el.text};if(el.id==="duration")return{...el,text:o.duration||el.text};if(el.id==="deposit")return{...el,text:o.deposit||el.text};if(el.id==="price")return{...el,text:o.price||el.text};return el;});
@@ -697,10 +713,10 @@ export default function App(){
                 {accElementi&&(<div>
                   <div style={{marginBottom:10,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
                     <div className="lbl">⚡ Applica font a TUTTI gli elementi</div>
-                    <select className="inp" defaultValue="" onChange={e=>{const f=e.target.value;if(!f)return;setElements(p=>p.map(el=>({...el,fontFamily:f})));e.target.value="";}}>
+                    <select className="inp" defaultValue="" onChange={e=>{applyFontToAll(e.target.value);e.target.value="";}}>
                       <option value="">— Scegli font —</option>
-                      {FONTS.map(f=><option key={f}>{f}</option>)}
-                      {customFonts.length>0&&<optgroup label="Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}
+                      <optgroup label="Preset">{FONTS.map(f=><option key={f}>{f}</option>)}</optgroup>
+                      {customFonts.length>0&&<optgroup label="📝 Personalizzati">{customFonts.map(f=><option key={f.name}>{f.name}</option>)}</optgroup>}
                     </select>
                   </div>
                   <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
@@ -709,9 +725,9 @@ export default function App(){
                     <div style={{marginBottom:8,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
                       <div className="lbl">📝 Carica font personalizzato (.ttf/.otf/.woff)</div>
                       <input type="file" multiple accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" className="fi" style={{padding:5,fontSize:10}} onChange={uploadFont}/>
-                      {customFonts.length>0&&<div style={{marginTop:5,display:"flex",flexWrap:"wrap",gap:3}}>{customFonts.map(n=>(<span key={n} style={{fontSize:10,padding:"2px 6px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:10,color:"#00BCD4",display:"inline-flex",alignItems:"center",gap:4}}>{n}<span onClick={()=>removeCustomFont(n)} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></span>))}</div>}
+                      {customFonts.length>0&&<div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>{customFonts.map(f=>(<div key={f.name} style={{fontSize:10,padding:"4px 8px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:8,color:"#00BCD4",display:"flex",alignItems:"center",gap:6}}><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span><button onClick={()=>applyFontToAll(f.name)} title="Applica a tutti gli elementi" style={{background:"transparent",border:"1px solid #00BCD4",color:"#00BCD4",borderRadius:4,padding:"1px 6px",fontSize:9,cursor:"pointer",fontWeight:700}}>⚡ Tutti</button><span onClick={()=>{const n=prompt("Nuovo nome per il font:",f.name);if(n)renameCustomFont(f.name,n);}} style={{cursor:"pointer",color:"#FFC107",fontWeight:700}} title="Rinomina">✏️</span><span onClick={()=>{if(window.confirm("Rimuovere il font \""+f.name+"\"?"))removeCustomFont(f.name);}} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></div>))}</div>}
                     </div>
-                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
+                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="📝 Personalizzati">{customFonts.map(f=><option key={f.name}>{f.name}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["400","600","700","800","900"].map(w=><option key={w}>{w}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
                     <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
                     <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
                     <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
