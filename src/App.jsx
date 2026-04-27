@@ -605,4 +605,7 @@ export default function App(){
                 </button>
               ))}
             </div>
-            <button onClick={()=>setDlModal(null)} style={{marginTop:16,width:"100%",padding:"10px",background:"transparent",border:"1px solid #25253
+            <button onClick={()=>setDlModal(null)} style={{marginTop:16,width:"100%",padding:"10px",background:"transparent",border:"1px solid #252538",borderRadius:8,color:"#666",cursor:"pointer",fontSize:12,fontWeight:600}}>Annulla</button>
+          </div>
+        </div>
+      )}
