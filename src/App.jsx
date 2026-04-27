@@ -380,15 +380,22 @@ export default function App(){
         .qf input,.qf textarea{background:transparent;border:none;color:#fff;font-size:13px;width:100%;outline:none;font-weight:600}
         .qf input::placeholder,.qf textarea::placeholder{color:#3a3a50;font-weight:400}
         .elitem{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center}.elitem:hover{background:#14141f}.elitem.on{background:#14141f;border-left:3px solid #00BCD4}
-        .offer-row{display:flex;gap:20px;background:#0d0d16;border:1px solid #1a1a28;border-radius:12px;padding:20px;margin-bottom:16px;transition:border .2s}
+        .acc{margin-bottom:8px;border:1px solid #1e1e30;border-radius:8px;overflow:hidden;background:#0a0a14}
+        .acc>summary{padding:9px 12px;cursor:pointer;font-size:12px;font-weight:700;color:#00BCD4;background:#0f0f1a;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between}
+        .acc>summary::-webkit-details-marker{display:none}
+        .acc>summary::after{content:"▾";font-size:10px;color:#666;transition:transform .2s}
+        .acc[open]>summary::after{transform:rotate(180deg)}
+        .acc>summary:hover{background:#14141f;color:#fff}
+        .acc-body{padding:10px 12px;border-top:1px solid #1e1e30}
+        .offer-row{display:flex;gap:12px;background:#0d0d16;border:1px solid #1a1a28;border-radius:10px;padding:12px;margin-bottom:10px;transition:border .2s}
         .offer-row:hover{border-color:#252545}
-        .offer-preview{flex:1;min-width:0}
-        .offer-form{width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
-        .offer-form .ofi{margin-bottom:2px}
+        .offer-preview{width:300px;flex:0 0 300px;min-width:0}
+        .offer-form{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+        .offer-form .ofi{margin-bottom:1px}
         .offer-form .ofi label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:1px}
-        .offer-form .ofi input{background:#0a0a14;border:1px solid #1e1e30;color:#ddd;padding:7px 9px;border-radius:6px;font-size:12px;width:100%;outline:none;font-weight:600}.offer-form .ofi input:focus{border-color:#00BCD4}
-        .offer-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00BCD4,#0097A7);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff;flex-shrink:0}
-        .add-btn{border:2px dashed #252538;border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px;color:#555;font-size:13px;font-weight:600}
+        .offer-form .ofi input,.offer-form .ofi textarea{background:#0a0a14;border:1px solid #1e1e30;color:#ddd;padding:5px 8px;border-radius:5px;font-size:11px;width:100%;outline:none;font-weight:600}.offer-form .ofi input:focus,.offer-form .ofi textarea:focus{border-color:#00BCD4}
+        .offer-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#00BCD4,#0097A7);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;flex-shrink:0}
+        .add-btn{border:2px dashed #252538;border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px;color:#555;font-size:12px;font-weight:600}
         .add-btn:hover{border-color:#00BCD4;color:#00BCD4;background:#00BCD408}
       `}</style>
 
@@ -407,9 +414,9 @@ export default function App(){
         </div>
       </div>
 
-      {/* TAB BAR */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"1px solid #1a1a28",background:"#0d0d16"}}>
-        {[{k:"offerta",l:"📝 Offerta"},{k:"immagini",l:"🖼 Immagini"},{k:"elemento",l:"🎨 Stile Elementi"},{k:"sfondo",l:"⚙ Sfondo"},{k:"batch",l:`📦 Batch${offers.length?` (${offers.length})`:""}`}].map(t=>
+      {/* TAB BAR — 3 aree */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",borderBottom:"1px solid #1a1a28",background:"#0d0d16"}}>
+        {[{k:"offerta",l:"📝 Offerta"},{k:"setup",l:"⚙ Setup"},{k:"batch",l:`📋 Offerte${offers.length?` (${offers.length})`:""}`}].map(t=>
           <button key={t.k} className={`tab ${tab===t.k?"on":""}`} onClick={()=>setTab(t.k)}>{t.l}</button>)}
       </div>
 
@@ -428,36 +435,49 @@ export default function App(){
               {qf.map((q,i)=>{const el=getEl(q.id),val=q.key?el[q.key]||"":el.text;return(<div className="qf" key={i}><div className="ql">{q.label}</div><textarea value={val} placeholder={q.ph} rows={1} onChange={e=>{if(q.key)setEl(q.id,q.key,e.target.value);else setEl(q.id,"text",e.target.value);}} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:20,fontFamily:"inherit",lineHeight:1.35}}/></div>);})}
               <div className="qf"><div className="ql">📋 Servizi</div><textarea className="inp" rows={3} value={getEl("services").text} onChange={e=>setEl("services","text",e.target.value)} style={{background:"transparent",border:"none",fontSize:11,padding:0}}/></div>
             </div>)}
-            {tab==="immagini"&&(<div>
-              {[{l:"🏞️ Sfondo",s:bgImage,set:setBgImage,a:"image/*"},{l:"🚗 Auto",s:carImage,set:setCarImage,a:"image/png"},{l:"🏷️ Logo",s:logoImage,set:setLogoImage,a:"image/png"}].map(u=>(
-                <div key={u.l} style={{marginBottom:14}}><div className="lbl">{u.l}</div><input type="file" accept={u.a} className="fi" onChange={e=>loadImg(u.set,e)}/>{u.s&&<div style={{fontSize:11,color:"#00BCD4",marginTop:3}}>✅</div>}</div>))}
-              <div className="card"><div className="lbl">Auto</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={carPos.x} onChange={e=>setCarPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={carPos.y} onChange={e=>setCarPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={carPos.scale} onChange={e=>setCarPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(carPos.scale*100)}%</span></div></div>
-              <div className="card"><div className="lbl">Logo</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={logoPos.x} onChange={e=>setLogoPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={logoPos.y} onChange={e=>setLogoPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.02" max="1" step="0.01" value={logoPos.scale} onChange={e=>setLogoPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(logoPos.scale*100)}%</span></div></div>
-            </div>)}
-            {tab==="elemento"&&(<div>
-              <div style={{marginBottom:12,padding:10,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:8}}>
-                <div className="lbl">📝 Carica font personalizzato</div>
-                <div style={{fontSize:10,color:"#666",marginBottom:4}}>.ttf / .otf / .woff / .woff2</div>
-                <input type="file" multiple accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" className="fi" style={{padding:6,fontSize:11}} onChange={uploadFont}/>
-                {customFonts.length>0&&<div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:4}}>{customFonts.map(n=>(<span key={n} style={{fontSize:10,padding:"3px 7px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:10,color:"#00BCD4",display:"inline-flex",alignItems:"center",gap:4}}>{n}<span onClick={()=>removeCustomFont(n)} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></span>))}</div>}
-              </div>
-              <div style={{marginBottom:12}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
-              {sel&&(<div className="card">
-                <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
-                <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="📝 Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["100","200","300","400","500","600","700","800","900"].map(w=><option key={w} value={w}>{w} {({100:"Thin",200:"ExtraLight",300:"Light",400:"Regular",500:"Medium",600:"SemiBold",700:"Bold",800:"ExtraBold",900:"Black"})[w]}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
-                <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
-                <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
-                <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
-              </div>)}
-            </div>)}
-            {tab==="sfondo"&&(<div>
-              <div style={{marginBottom:12}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
-              <div style={{marginBottom:14}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
-              <div className="lbl" style={{marginBottom:8}}>Preset</div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{[{bg:"#0d0d1a",a:"#00BCD4",l:"Cyan"},{bg:"#1a0a0a",a:"#FF5252",l:"Rosso"},{bg:"#0a1a0d",a:"#4CAF50",l:"Verde"},{bg:"#1a1505",a:"#FFC107",l:"Oro"},{bg:"#0d0a1a",a:"#9C27B0",l:"Viola"},{bg:"#f0f0f0",a:"#1a1a2e",l:"Chiaro"}].map(pr=>(<button key={pr.l} className="btn bs" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>{setBgColor(pr.bg);setElements(p=>p.map(e=>({...e,...(e.highlightColor!==undefined?{highlightColor:pr.a}:{}),
-                ...(e.id==="price"?{color:pr.a}:{}),
-                ...(pr.bg==="#f0f0f0"&&e.color==="#FFFFFF"?{color:"#1a1a2e"}:{}),
-                ...(pr.bg!=="#f0f0f0"&&e.color==="#1a1a2e"?{color:"#FFFFFF"}:{})})));}}><span style={{display:"inline-block",width:10,height:10,background:pr.bg,border:`2px solid ${pr.a}`,borderRadius:2,marginRight:4,verticalAlign:"middle"}}/>{pr.l}</button>))}</div>
+            {tab==="setup"&&(<div>
+              {/* === SEZIONE 1 — IMMAGINI & POSIZIONI === */}
+              <details open className="acc">
+                <summary>{"🖼 Immagini & Posizioni"}</summary>
+                <div className="acc-body">
+                  {[{l:"🏞️ Sfondo",s:bgImage,set:setBgImage,a:"image/*"},{l:"🚗 Auto",s:carImage,set:setCarImage,a:"image/png"},{l:"🏷️ Logo",s:logoImage,set:setLogoImage,a:"image/png"}].map(u=>(
+                    <div key={u.l} style={{marginBottom:10}}><div className="lbl">{u.l}</div><input type="file" accept={u.a} className="fi" onChange={e=>loadImg(u.set,e)}/>{u.s&&<div style={{fontSize:11,color:"#00BCD4",marginTop:3}}>✅</div>}</div>))}
+                  <div className="card"><div className="lbl">Auto</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={carPos.x} onChange={e=>setCarPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={carPos.y} onChange={e=>setCarPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.1" max="2" step="0.02" value={carPos.scale} onChange={e=>setCarPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(carPos.scale*100)}%</span></div></div>
+                  <div className="card"><div className="lbl">Logo</div><div className="row" style={{marginBottom:6}}><span style={{fontSize:10,width:14}}>X</span><input className="inp" type="number" value={logoPos.x} onChange={e=>setLogoPos(p=>({...p,x:+e.target.value}))}/><span style={{fontSize:10,width:14}}>Y</span><input className="inp" type="number" value={logoPos.y} onChange={e=>setLogoPos(p=>({...p,y:+e.target.value}))}/></div><div className="row"><span style={{fontSize:10,width:34}}>Scala</span><input type="range" min="0.02" max="1" step="0.01" value={logoPos.scale} onChange={e=>setLogoPos(p=>({...p,scale:+e.target.value}))} style={{flex:1,accentColor:"#00BCD4"}}/><span style={{fontSize:11,width:36,textAlign:"right"}}>{Math.round(logoPos.scale*100)}%</span></div></div>
+                </div>
+              </details>
+              {/* === SEZIONE 2 — STILE ELEMENTI === */}
+              <details className="acc">
+                <summary>🎨 Stile Elementi</summary>
+                <div className="acc-body">
+                  <div style={{marginBottom:10,padding:8,background:"#0f0f1a",border:"1px solid #1e1e30",borderRadius:6}}>
+                    <div className="lbl">📝 Carica font (.ttf/.otf/.woff)</div>
+                    <input type="file" multiple accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" className="fi" style={{padding:5,fontSize:11}} onChange={uploadFont}/>
+                    {customFonts.length>0&&<div style={{marginTop:5,display:"flex",flexWrap:"wrap",gap:3}}>{customFonts.map(n=>(<span key={n} style={{fontSize:10,padding:"3px 7px",background:"#0a0a14",border:"1px solid #00BCD4",borderRadius:10,color:"#00BCD4",display:"inline-flex",alignItems:"center",gap:4}}>{n}<span onClick={()=>removeCustomFont(n)} style={{cursor:"pointer",color:"#ef5350",fontWeight:700}} title="Rimuovi">×</span></span>))}</div>}
+                  </div>
+                  <div style={{marginBottom:10}}>{elements.map(el=>(<div key={el.id} className={`elitem ${selectedEl===el.id?"on":""}`} onClick={()=>setSelectedEl(el.id)}><span>{el.id}</span><span style={{cursor:"pointer",opacity:el.visible?1:.3}} onClick={e=>{e.stopPropagation();setEl(el.id,"visible",!el.visible)}}>{el.visible?"👁":"🚫"}</span></div>))}</div>
+                  {sel&&(<div className="card">
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"#00BCD4"}}>{sel.id}</div>
+                    <div style={{marginBottom:8}}><div className="lbl">Font</div><div className="row"><select className="inp" value={sel.fontFamily} onChange={e=>setEl(sel.id,"fontFamily",e.target.value)} style={{flex:2}}>{FONTS.map(f=><option key={f}>{f}</option>)}{customFonts.length>0&&<optgroup label="📝 Personalizzati">{customFonts.map(f=><option key={f}>{f}</option>)}</optgroup>}</select><select className="inp" value={sel.fontWeight} onChange={e=>setEl(sel.id,"fontWeight",e.target.value)} style={{flex:1}}>{["100","200","300","400","500","600","700","800","900"].map(w=><option key={w} value={w}>{w} {({100:"Thin",200:"ExtraLight",300:"Light",400:"Regular",500:"Medium",600:"SemiBold",700:"Bold",800:"ExtraBold",900:"Black"})[w]}</option>)}</select><input className="inp" type="number" value={sel.fontSize} onChange={e=>setEl(sel.id,"fontSize",+e.target.value)} style={{width:50,flex:"none"}}/></div></div>
+                    <div style={{marginBottom:8}}><div className="lbl">Colori</div><div className="row"><div><div style={{fontSize:9,color:"#555"}}>Testo</div><input type="color" value={sel.color} onChange={e=>setEl(sel.id,"color",e.target.value)}/></div>{sel.highlightColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Evidenza</div><input type="color" value={sel.highlightColor} onChange={e=>setEl(sel.id,"highlightColor",e.target.value)}/></div>}{sel.bgColor!==undefined&&<div><div style={{fontSize:9,color:"#555"}}>Sfondo</div><input type="color" value={sel.bgColor} onChange={e=>setEl(sel.id,"bgColor",e.target.value)}/></div>}</div></div>
+                    <div style={{marginBottom:8}}><div className="lbl">Posizione</div><div className="row"><input className="inp" type="number" value={sel.x} onChange={e=>setEl(sel.id,"x",+e.target.value)}/><input className="inp" type="number" value={sel.y} onChange={e=>setEl(sel.id,"y",+e.target.value)}/></div></div>
+                    <div><div className="lbl">Allineamento</div><div className="row">{["left","center","right"].map(a=>(<button key={a} className={`btn ${sel.textAlign===a?"bp":"bs"}`} style={{flex:1,padding:5}} onClick={()=>setEl(sel.id,"textAlign",a)}>{a==="left"?"⬅":a==="center"?"⬛":"➡"}</button>))}</div></div>
+                  </div>)}
+                </div>
+              </details>
+              {/* === SEZIONE 3 — SFONDO & COLORI === */}
+              <details className="acc">
+                <summary>{"🌈 Sfondo & Colori"}</summary>
+                <div className="acc-body">
+                  <div style={{marginBottom:10}}><div className="lbl">Colore sfondo</div><div className="row"><input type="color" value={bgColor} onChange={e=>setBgColor(e.target.value)}/><input className="inp" value={bgColor} onChange={e=>setBgColor(e.target.value)} style={{flex:1}}/></div></div>
+                  <div style={{marginBottom:12}}><div className="lbl">Opacità overlay: {Math.round(overlayOpacity*100)}%</div><input type="range" min="0" max="1" step="0.05" value={overlayOpacity} onChange={e=>setOverlayOpacity(+e.target.value)} style={{width:"100%",accentColor:"#00BCD4"}}/></div>
+                  <div className="lbl" style={{marginBottom:6}}>Preset</div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{[{bg:"#0d0d1a",a:"#00BCD4",l:"Cyan"},{bg:"#1a0a0a",a:"#FF5252",l:"Rosso"},{bg:"#0a1a0d",a:"#4CAF50",l:"Verde"},{bg:"#1a1505",a:"#FFC107",l:"Oro"},{bg:"#0d0a1a",a:"#9C27B0",l:"Viola"},{bg:"#f0f0f0",a:"#1a1a2e",l:"Chiaro"}].map(pr=>(<button key={pr.l} className="btn bs" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>{setBgColor(pr.bg);setElements(p=>p.map(e=>({...e,...(e.highlightColor!==undefined?{highlightColor:pr.a}:{}),
+                    ...(e.id==="price"?{color:pr.a}:{}),
+                    ...(pr.bg==="#f0f0f0"&&e.color==="#FFFFFF"?{color:"#1a1a2e"}:{}),
+                    ...(pr.bg!=="#f0f0f0"&&e.color==="#1a1a2e"?{color:"#FFFFFF"}:{})})));}}><span style={{display:"inline-block",width:10,height:10,background:pr.bg,border:`2px solid ${pr.a}`,borderRadius:2,marginRight:4,verticalAlign:"middle"}}/>{pr.l}</button>))}</div>
+                </div>
+              </details>
             </div>)}
           </div>
           {/* CANVAS */}
@@ -466,16 +486,16 @@ export default function App(){
           </div>
         </div>
       ) : (
-        /* ==================== BATCH MODE — FULL SCREEN ==================== */
-        <div style={{flex:1,overflow:"auto",padding:"20px 24px",background:"#08080d"}}>
+        /* ==================== OFFERTE — FULL SCREEN ==================== */
+        <div style={{flex:1,overflow:"auto",padding:"12px 16px",background:"#08080d"}}>
 
           {offers.length===0&&(
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"50vh",gap:16}}>
-              <div style={{fontSize:48}}>📦</div>
-              <div style={{fontSize:16,color:"#666",textAlign:"center"}}>Nessuna offerta. Inizia aggiungendone una.</div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"50vh",gap:14}}>
+              <div style={{fontSize:42}}>📋</div>
+              <div style={{fontSize:15,color:"#666",textAlign:"center"}}>Nessuna offerta. Inizia aggiungendone una.</div>
               <div style={{display:"flex",gap:10}}>
-                <button className="btn bp" style={{padding:"12px 24px",fontSize:14}} onClick={()=>addOffer(null)}>➕ Nuova offerta</button>
-                <button className="btn bs" style={{padding:"12px 24px",fontSize:14}} onClick={dupFromCurrent}>📋 Copia da offerta singola</button>
+                <button className="btn bp" style={{padding:"10px 22px",fontSize:13}} onClick={()=>addOffer(null)}>➕ Nuova offerta</button>
+                <button className="btn bs" style={{padding:"10px 22px",fontSize:13}} onClick={dupFromCurrent}>📋 Copia da offerta singola</button>
               </div>
             </div>
           )}
@@ -483,16 +503,16 @@ export default function App(){
           {offers.map((o,idx)=>(
             <div key={o.id}>
               <div id={`offer-${o.id}`} className="offer-row">
-                {/* LEFT: preview */}
+                {/* LEFT: preview compatta */}
                 <div className="offer-preview">
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                     <div className="offer-num">{idx+1}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:16,fontWeight:800,color:o.carName?"#fff":"#555"}}>{o.carName||"Nuova offerta"}</div>
-                      {o.price&&<div style={{fontSize:14,fontWeight:900,color:"#00BCD4"}}>{o.price} €/mese</div>}
+                    <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
+                      <div style={{fontSize:13,fontWeight:800,color:o.carName?"#fff":"#555",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.carName||"Nuova offerta"}</div>
+                      {o.price&&<div style={{fontSize:12,fontWeight:900,color:"#00BCD4"}}>{o.price} €/mese</div>}
                     </div>
-                    <button className="btn bp" style={{fontSize:11,padding:"6px 16px"}} onClick={()=>setDlModal({type:"offer",offer:o,num:idx+1})}>⬇ Scarica</button>
-                    <button className="btn bd" style={{padding:"6px 10px",fontSize:11}} onClick={()=>removeOffer(o.id)}>🗑</button>
+                    <button className="btn bp" style={{fontSize:10,padding:"5px 10px"}} onClick={()=>setDlModal({type:"offer",offer:o,num:idx+1})}>⬇</button>
+                    <button className="btn bd" style={{padding:"5px 8px",fontSize:10}} onClick={()=>removeOffer(o.id)}>🗑</button>
                   </div>
                   <LiveCanvas offer={o} elements={elements} bgImage={bgImage} carImage={carImage} logoImage={logoImage} bgColor={bgColor} overlayOpacity={overlayOpacity} logoPos={logoPos} showGuides={showGuides}
                     onDragCar={(x,y)=>setOffers(p=>p.map(oo=>oo.id===o.id?{...oo,carX:x,carY:y}:oo))}/>
@@ -501,11 +521,11 @@ export default function App(){
                 {/* RIGHT: form */}
                 <div className="offer-form">
                   {/* WA paste */}
-                  <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:8,padding:10,marginBottom:8}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#25D366",marginBottom:6}}>💬 Inserisci istruzioni</div>
-                    <textarea value={o._waText||""} onChange={e=>setOffers(p=>p.map(x=>x.id===o.id?{...x,_waText:e.target.value}:x))} placeholder="Scrivi qui le indicazioni per la nuova offerta" rows={2} style={{width:"100%",background:"#0d1f16",border:"1px solid #1b3a28",color:"#ddd",padding:"6px 8px",borderRadius:6,fontSize:11,outline:"none",resize:"vertical"}}/>
-                    <div className="row" style={{marginTop:6}}>
-                      <button className="btn bg" disabled={o._parsing||!(o._waText||"").trim()} onClick={()=>handleWaOffer(o.id,o._waText||"")} style={{padding:"6px 14px",fontSize:11,opacity:!(o._waText||"").trim()?.4:1}}>{o._parsing?"⏳":"🤖 Compila con AI"}</button>
+                  <div style={{background:"#0a1a12",border:"1px solid #1b3a28",borderRadius:6,padding:8,marginBottom:6}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#25D366",marginBottom:4}}>💬 Istruzioni</div>
+                    <textarea value={o._waText||""} onChange={e=>setOffers(p=>p.map(x=>x.id===o.id?{...x,_waText:e.target.value}:x))} placeholder="Indicazioni per la nuova offerta" rows={2} style={{width:"100%",background:"#0d1f16",border:"1px solid #1b3a28",color:"#ddd",padding:"5px 7px",borderRadius:5,fontSize:11,outline:"none",resize:"vertical"}}/>
+                    <div className="row" style={{marginTop:5}}>
+                      <button className="btn bg" disabled={o._parsing||!(o._waText||"").trim()} onClick={()=>handleWaOffer(o.id,o._waText||"")} style={{padding:"5px 12px",fontSize:10,opacity:!(o._waText||"").trim()?.4:1}}>{o._parsing?"⏳":"🤖 Compila con AI"}</button>
                       {o._waError&&<span style={{fontSize:10,color:"#ef5350"}}>{o._waError}</span>}
                     </div>
                   </div>
@@ -513,7 +533,7 @@ export default function App(){
                   {/* Fields */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[{k:"carName",l:"Nome Auto",ph:"MERCEDES GLC COUPÉ"},{k:"highlightWord",l:"Evidenziata",ph:"GLC COUPÉ"},{k:"specs",l:"Caratteristiche",ph:"220D MHEV..."},{k:"duration",l:"Durata / KM",ph:"48 MESI – 60.000 KM"},{k:"deposit",l:"Anticipo",ph:"ANTICIPO 2.000€"},{k:"price",l:"Canone €",ph:"689"}].map(f=>(
-                      <div className="ofi" key={f.k}><label>{f.l}</label><textarea value={o[f.k]||""} placeholder={f.ph} rows={1} onChange={e=>updOffer(o.id,f.k,e.target.value)} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:30,fontFamily:"inherit",lineHeight:1.35,background:"#0a0a14",border:"1px solid #1e1e30",color:"#ddd",padding:"7px 9px",borderRadius:6,fontSize:12,width:"100%",outline:"none",fontWeight:600}}/></div>
+                      <div className="ofi" key={f.k}><label>{f.l}</label><textarea value={o[f.k]||""} placeholder={f.ph} rows={1} onChange={e=>updOffer(o.id,f.k,e.target.value)} ref={el=>{if(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}}} style={{resize:"none",overflow:"hidden",minHeight:24,fontFamily:"inherit",lineHeight:1.3}}/></div>
                     ))}
                   </div>
 
