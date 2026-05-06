@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import BatchImportPanel from "./BatchImportPanel";
 
 const FONT_DB = {
   "Montserrat": [100,200,300,400,500,600,700,800,900],
@@ -590,6 +591,7 @@ export default function App(){
   };
 
   const addOffer=(afterId)=>{const o=newOffer();setOffers(p=>{if(!afterId)return[...p,o];const i=p.findIndex(x=>x.id===afterId);const n=[...p];n.splice(i+1,0,o);return n;});setActiveOfferId(o.id);};
+  const addOffersFromBatch=(drafts)=>{if(!drafts||!drafts.length)return;const made=drafts.map(d=>({...newOffer(),...d}));setOffers(p=>[...p,...made]);setActiveOfferId(made[0].id);};
   const dupFromCurrent=()=>{const o=newOffer();o.carName=getEl("carName").text;o.highlightWord=getEl("carName").highlightWord||"";o.specs=getEl("specs").text;o.duration=getEl("duration").text;o.deposit=getEl("deposit").text;o.price=getEl("price").text;setOffers(p=>[...p,o]);setActiveOfferId(o.id);};
   const applyAccentColor=(color)=>{setElements(p=>p.map(e=>{const upd={};if(e.highlightColor!==undefined)upd.highlightColor=color;if(e.id==="price")upd.color=color;return{...e,...upd};}));};
   const saveColorPreset=()=>{if(!newPresetName.trim())return;const id="p"+Date.now();setColorPresets(p=>[...p,{id,label:newPresetName.trim(),accentColor:newPresetColor}]);setNewPresetName("");};
@@ -833,7 +835,12 @@ export default function App(){
         /* ==================== BATCH MODE — SETUP LAYOUT ==================== */
         <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
           {/* LEFT SIDEBAR */}
-          <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",display:"flex",flexDirection:"column",minHeight:0}}>
+          <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",display:"flex",flexDirection:"column",minHeight:0,overflowY:"auto"}}>
+
+            {/* Batch import (testo + cartella PNG → N offerte) */}
+            <div style={{flexShrink:0,padding:"10px 12px 0"}}>
+              <BatchImportPanel apiKey={apiKey} existingOfferCount={offers.length} onCommit={addOffersFromBatch}/>
+            </div>
 
             {/* Offer list — sempre visibile, non scorre con i controlli */}
             <div style={{flexShrink:0,padding:"12px 12px 8px",borderBottom:"1px solid #1a1a28"}}>
@@ -847,12 +854,13 @@ export default function App(){
               <div style={{maxHeight:180,overflowY:"auto"}}>
                 {offers.map((o,idx)=>(
                   <div key={o.id} onClick={()=>setActiveOfferId(o.id)}
+                    title={`${o.carName||"Nuova offerta"}${o.specs?"\n"+o.specs:""}${o.duration?"\n"+o.duration:""}${o.deposit?"\n"+o.deposit:""}${o.price?"\nCanone: "+o.price+"€/mese":""}`}
                     style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,marginBottom:3,cursor:"pointer",
                       background:activeOffer&&activeOffer.id===o.id?"#1a1a2e":"#0a0a14",
                       border:`1px solid ${activeOffer&&activeOffer.id===o.id?"#00BCD4":"#1e1e30"}`}}>
                     <div className="offer-num" style={{width:26,height:26,fontSize:11,flexShrink:0}}>{idx+1}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:o.carName?"#fff":"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.carName||"Nuova offerta"}</div>
+                      <div title={o.carName||"Nuova offerta"} style={{fontSize:12,fontWeight:700,color:o.carName?"#fff":"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.carName||"Nuova offerta"}</div>
                       {o.price&&<div style={{fontSize:10,color:"#00BCD4",fontWeight:700}}>{o.price} €/mese</div>}
                     </div>
                     <button className="btn bd" style={{padding:"3px 7px",fontSize:10,flexShrink:0}} onClick={e=>{e.stopPropagation();removeOffer(o.id);}}>🗑</button>
@@ -861,8 +869,8 @@ export default function App(){
               </div>
             </div>
 
-            {/* Controls for active offer — sezione scrollabile separata */}
-            <div style={{flex:1,overflowY:"auto",padding:12}}>
+            {/* Controls for active offer — flusso naturale (lo scroll è sul sidebar) */}
+            <div style={{flexShrink:0,padding:12}}>
             {activeOffer&&(
               <div style={{borderTop:"1px solid #1a1a28",paddingTop:10}}>
                 {/* AI */}
