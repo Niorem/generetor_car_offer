@@ -833,35 +833,36 @@ export default function App(){
         /* ==================== BATCH MODE — SETUP LAYOUT ==================== */
         <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
           {/* LEFT SIDEBAR */}
-          <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",overflow:"auto",padding:12,display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{width:380,background:"#0d0d16",borderRight:"1px solid #1a1a28",display:"flex",flexDirection:"column",minHeight:0}}>
 
-            {/* Offer list */}
-            <div>
+            {/* Offer list — sempre visibile, non scorre con i controlli */}
+            <div style={{flexShrink:0,padding:"12px 12px 8px",borderBottom:"1px solid #1a1a28"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                 <div style={{fontSize:10,fontWeight:700,color:"#777",textTransform:"uppercase",letterSpacing:".6px"}}>Offerte ({offers.length})</div>
-                <div style={{display:"flex",gap:6}}>
-                  <button className="btn bp" style={{padding:"4px 10px",fontSize:11}} onClick={()=>addOffer(null)}>➕ Nuova</button>
-                </div>
+                <button className="btn bp" style={{padding:"4px 10px",fontSize:11}} onClick={()=>addOffer(null)}>➕ Nuova</button>
               </div>
               {offers.length===0&&(
-                <div style={{textAlign:"center",padding:"20px 0",color:"#555",fontSize:12}}>Nessuna offerta ancora.</div>
+                <div style={{textAlign:"center",padding:"12px 0",color:"#555",fontSize:12}}>Nessuna offerta ancora.</div>
               )}
-              {offers.map((o,idx)=>(
-                <div key={o.id} onClick={()=>setActiveOfferId(o.id)}
-                  style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,marginBottom:4,cursor:"pointer",
-                    background:activeOffer&&activeOffer.id===o.id?"#1a1a2e":"#0a0a14",
-                    border:`1px solid ${activeOffer&&activeOffer.id===o.id?"#00BCD4":"#1e1e30"}`}}>
-                  <div className="offer-num" style={{width:28,height:28,fontSize:12,flexShrink:0}}>{idx+1}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:700,color:o.carName?"#fff":"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.carName||"Nuova offerta"}</div>
-                    {o.price&&<div style={{fontSize:10,color:"#00BCD4",fontWeight:700}}>{o.price} €/mese</div>}
+              <div style={{maxHeight:180,overflowY:"auto"}}>
+                {offers.map((o,idx)=>(
+                  <div key={o.id} onClick={()=>setActiveOfferId(o.id)}
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,marginBottom:3,cursor:"pointer",
+                      background:activeOffer&&activeOffer.id===o.id?"#1a1a2e":"#0a0a14",
+                      border:`1px solid ${activeOffer&&activeOffer.id===o.id?"#00BCD4":"#1e1e30"}`}}>
+                    <div className="offer-num" style={{width:26,height:26,fontSize:11,flexShrink:0}}>{idx+1}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:o.carName?"#fff":"#555",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.carName||"Nuova offerta"}</div>
+                      {o.price&&<div style={{fontSize:10,color:"#00BCD4",fontWeight:700}}>{o.price} €/mese</div>}
+                    </div>
+                    <button className="btn bd" style={{padding:"3px 7px",fontSize:10,flexShrink:0}} onClick={e=>{e.stopPropagation();removeOffer(o.id);}}>🗑</button>
                   </div>
-                  <button className="btn bd" style={{padding:"3px 7px",fontSize:10,flexShrink:0}} onClick={e=>{e.stopPropagation();removeOffer(o.id);}}>🗑</button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            {/* Controls for active offer */}
+            {/* Controls for active offer — sezione scrollabile separata */}
+            <div style={{flex:1,overflowY:"auto",padding:12}}>
             {activeOffer&&(
               <div style={{borderTop:"1px solid #1a1a28",paddingTop:10}}>
                 {/* AI */}
@@ -929,6 +930,7 @@ export default function App(){
                 </div>
               </div>
             )}
+            </div>{/* fine sezione scrollabile controlli */}
           </div>
 
           {/* RIGHT: CANVAS */}
